@@ -1,0 +1,14 @@
+{
+  "name": "utopia-warroom",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Utopia War Room — planner pages, intel/sync server, and Discord bot",
+  "engines": { "node": ">=22.12" },
+  "scripts": {
+    "start": "node intel-server.js",
+    "bot": "node discord-bot.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.26.4"
+  }
+}

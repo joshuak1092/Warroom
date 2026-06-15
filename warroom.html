@@ -1,0 +1,2945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WAR ROOM — Utopia Wave Planner</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root{
+  --bg:#000000; --bg2:#0a0c11; --bg3:#0f1219; --surface:#13161d; --surface2:#181c25;
+  --line:#262b36; --line2:#343b49;
+  --gold:#6f8cff; --gold2:#a3b6ff; --golddim:#2b3a6b;
+  --amber:#e0a52e;
+  --teal:#2dd4bf; --teal2:#5eead4;
+  --blue:#b89bff;
+  --green:#34d399; --green2:#6ee7b7; --greenbg:#0c2a1f; --greenline:#1f7a57;
+  --red:#f6604f; --red2:#ff8a7c; --redbg:#2c1310; --redline:#7a2e26;
+  --txt:#e6e9f0; --txt2:#99a2b4; --txt3:#69728a; --head:#ffffff;
+  --r:14px; --r2:10px;
+  --sh:0 1px 2px rgba(0,0,0,.5), 0 8px 24px -10px rgba(0,0,0,.7);
+  --sh2:0 2px 8px rgba(0,0,0,.6), 0 18px 44px -16px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:
+    radial-gradient(900px 420px at 88% -8%, rgba(111,140,255,.13), transparent 60%),
+    radial-gradient(720px 420px at -6% 104%, rgba(246,96,79,.08), transparent 58%),
+    var(--bg);
+  background-attachment:fixed;
+  color:var(--txt);
+  font-family:'Plus Jakarta Sans',ui-sans-serif,system-ui,sans-serif;
+  font-size:14.5px; line-height:1.5; min-height:100vh; -webkit-font-smoothing:antialiased;
+}
+::-webkit-scrollbar{width:11px;height:11px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#2b3240;border-radius:6px;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:#3a4456;background-clip:content-box}
+
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:600}
+.cz{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800}
+
+#app{display:flex;min-height:100vh;position:relative}
+
+/* ── SIDEBAR ── */
+#side{width:236px;min-width:236px;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;z-index:50;
+  background:var(--surface);border-right:1px solid var(--line)}
+.brand{padding:20px 18px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line)}
+.brand .crest{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:20px;flex-shrink:0;color:#fff;
+  background:linear-gradient(145deg,#4a66c4,#2f47a0);box-shadow:0 6px 16px -6px rgba(58,86,176,.6)}
+.brand .wm h1{font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:800;color:var(--head);letter-spacing:-.02em;line-height:1}
+.brand .wm p{font-size:11px;color:var(--txt3);font-weight:600;margin-top:4px;display:flex;align-items:center;gap:6px}
+.brand .wm p::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(22,163,74,.18);animation:pulse 1.6s infinite}
+
+.kd-switch{padding:15px 16px 12px;border-bottom:1px solid var(--line)}
+.lbl{font-size:11px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--txt3);margin-bottom:7px;display:block}
+select,input[type=text],input[type=number],input[type=datetime-local]{
+  width:100%;background:var(--surface);border:1px solid var(--line2);color:var(--txt);
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;font-weight:500;padding:9px 11px;border-radius:9px;outline:none;transition:.15s}
+select:hover,input:hover{border-color:#aab6cb}
+select:focus,input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(58,86,176,.14)}
+select{cursor:pointer}
+
+.nav{padding:12px 12px;flex:1}
+.navttl{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3);padding:14px 10px 7px}
+.nav button{position:relative;display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:none;border:none;
+  color:var(--txt2);font-family:'Plus Jakarta Sans',sans-serif;font-size:14.5px;font-weight:600;padding:10px 12px;border-radius:10px;cursor:pointer;transition:.14s}
+.nav button:hover{background:var(--bg2);color:var(--txt)}
+.nav button.on{background:rgba(58,86,176,.1);color:var(--gold)}
+.nav button.on::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:60%;border-radius:0 3px 3px 0;background:var(--gold)}
+.nav button .i{font-size:15px;width:20px;text-align:center}
+
+.savebar{padding:13px 16px;border-top:1px solid var(--line);font-size:11.5px;font-weight:600;color:var(--txt3);display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--teal);flex-shrink:0}
+.dot.warn{background:var(--amber)}
+.dot.save{background:var(--gold);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.4}}
+
+/* ── MAIN ── */
+#main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 26px;
+  border-bottom:1px solid var(--line);background:rgba(7,9,13,.8);backdrop-filter:blur(12px)}
+.topbar h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:var(--head);letter-spacing:-.02em}
+.topbar .sub{font-size:12.5px;color:var(--txt3);margin-top:2px;font-weight:500}
+.clock{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:500;color:var(--txt2);text-align:right;line-height:1.7}
+.clock b{color:var(--gold)}
+
+.view{padding:24px 26px 80px}
+.view.anim>*{animation:rise .4s cubic-bezier(.2,.7,.3,1) backwards}
+.view.anim>*:nth-child(2){animation-delay:.05s}.view.anim>*:nth-child(3){animation-delay:.1s}.view.anim>*:nth-child(4){animation-delay:.15s}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}}
+
+/* ── PANELS ── */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh)}
+.panel-h{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.panel-h h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:15.5px;font-weight:700;color:var(--head);display:flex;gap:8px;align-items:center}
+.panel-h .cnt{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--txt3)}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:18px;align-items:start}
+@media(max-width:920px){.grid2{grid-template-columns:1fr}}
+.planner-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,.95fr);gap:16px;align-items:start}
+.side-col{display:flex;flex-direction:column;gap:16px;min-width:0}
+@media(max-width:1200px){.planner-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}.side-col{grid-column:1/-1;flex-direction:row}.side-col>*{flex:1;min-width:0}}
+@media(max-width:760px){.planner-grid{grid-template-columns:1fr}.side-col{flex-direction:column}}
+
+/* ── BUTTONS ── */
+.btn{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:12.5px;border-radius:9px;
+  padding:9px 15px;cursor:pointer;border:1px solid var(--line2);background:var(--surface);color:var(--txt);transition:.14s}
+.btn:hover{border-color:#aab6cb;background:var(--bg3)}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:#fff;box-shadow:0 4px 12px -4px rgba(58,86,176,.5)}
+.btn.gold:hover{background:var(--gold2);border-color:var(--gold2)}
+.btn.ghost{background:var(--surface)}
+.btn.red{color:var(--red2)}
+.btn.red:hover{border-color:var(--redline);background:var(--redbg)}
+.btn.sm{padding:7px 12px;font-size:12px}
+.btn.xs{padding:5px 10px;font-size:11px;border-radius:8px}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ── TABLES (used in My Kingdom view) ── */
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+thead th{font-size:10.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--txt3);
+  text-align:right;padding:11px 12px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface2)}
+thead th.l{text-align:left}
+tbody td{padding:11px 12px;text-align:right;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody td.l{text-align:left}
+tbody tr:hover{background:var(--bg3)}
+tbody tr:last-child td{border-bottom:none}
+.num{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--txt)}
+.pname{font-weight:700;color:var(--head);font-size:14px}
+.prace{font-size:11.5px;color:var(--txt3);font-weight:500}
+.def{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px;color:var(--head)}
+.dim{color:var(--txt3)}
+
+/* ── CARDS (provinces / targets) ── */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;padding:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 14px;transition:.14s;position:relative}
+.card:hover{border-color:#b9c3d6;box-shadow:var(--sh)}
+.card.brkable{border-left:3px solid var(--green)}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+.rng{text-align:right;flex-shrink:0}
+.rng .num{font-size:12px;color:var(--txt2);display:block;margin-bottom:3px}
+.card-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.kpair{display:flex;flex-direction:column;gap:2px}
+.kpair .k{font-size:10px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--txt3)}
+.kpair .v{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--head)}
+.kpair .v.sm{font-size:13px}
+.card-ctrls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:11px}
+.card-army{margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--txt2);font-weight:500}
+.card-actions{display:flex;gap:8px;margin-top:11px}
+.card-actions .btn{flex:1}
+
+/* ── NW pill ── */
+.pill{display:inline-block;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12.5px;padding:3px 9px;border-radius:999px;min-width:54px;text-align:center}
+.pill.in{background:var(--greenbg);color:var(--green2);border:1px solid var(--greenline)}
+.pill.out{background:var(--redbg);color:var(--red2);border:1px solid var(--redline)}
+
+/* ── badges ── */
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;letter-spacing:.01em;padding:3px 9px;border-radius:999px;border:1px solid}
+.b-home{color:var(--teal2);border-color:#9fded6;background:#e3f7f4}
+.b-out{color:var(--red2);border-color:var(--redline);background:var(--redbg)}
+.b-war{color:var(--red2);border-color:var(--redline);background:var(--redbg)}
+.b-hostile{color:var(--amber);border-color:#e8cd9a;background:#fbf2e0}
+.b-eowcf{color:var(--blue);border-color:#d6c6f0;background:#f3edfc}
+.b-avail{color:var(--green2);border-color:var(--greenline);background:var(--greenbg)}
+.b-done{color:var(--txt3);border-color:var(--line2);background:var(--bg3)}
+
+/* ── toggle ── */
+.tg{position:relative;display:inline-flex;align-items:center;gap:7px;cursor:pointer;user-select:none}
+.tg .sw{width:38px;height:22px;border-radius:999px;background:#2a3140;border:1px solid var(--line2);position:relative;transition:.18s cubic-bezier(.3,.8,.3,1);flex-shrink:0}
+.tg .sw::after{content:"";position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.18s cubic-bezier(.3,.8,.3,1);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.tg.on .sw{background:var(--green);border-color:var(--green)}
+.tg.on .sw::after{left:18px}
+.tg.bl.on .sw{background:var(--red);border-color:var(--red)}
+.tg .t{font-size:11px;font-weight:700;color:var(--txt3)}
+.tg.on .t{color:var(--txt)}
+.tg.disabled{opacity:.35;cursor:not-allowed}
+
+/* ── stepper ── */
+.step{display:inline-flex;align-items:center;border:1px solid var(--line2);border-radius:9px;overflow:hidden;background:var(--surface)}
+.step button{background:none;border:none;color:var(--txt2);width:26px;height:28px;cursor:pointer;font-size:15px;line-height:1;transition:.12s}
+.step button:hover{background:var(--bg2);color:var(--gold)}
+.step .v{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;padding:0 9px;min-width:24px;text-align:center;color:var(--txt)}
+
+/* ── leftover ── */
+.lo{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700}
+.lo.full{color:var(--green2)}.lo.part{color:var(--gold)}.lo.none{color:var(--txt3)}
+
+/* ── assigned chips (in target card) ── */
+.asgs{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.asg{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;background:var(--bg3);border:1px solid var(--line);border-radius:7px;padding:3px 8px}
+.asg.brk{border-color:var(--greenline);background:var(--greenbg);color:var(--green2)}
+.asg.fail{border-color:var(--redline);background:var(--redbg);color:var(--red2)}
+.asg .x{color:var(--txt3);cursor:pointer;font-weight:700}
+.asg .x:hover{color:var(--red)}
+.cat-mass{color:var(--gold)}.cat-chain{color:var(--red2)}.cat-tm{color:var(--blue)}
+
+/* ── wave columns (side by side) ── */
+.wave-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+@media(max-width:1000px){.wave-cols{grid-template-columns:1fr 1fr}}
+@media(max-width:680px){.wave-cols{grid-template-columns:1fr}}
+.wcol-h{padding:12px 15px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:3px}
+.wcol-h .t{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:14px;display:flex;align-items:center;gap:7px}
+.wcol-h .s{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--txt3)}
+.wcol-h.mass{border-top:3px solid var(--gold)}
+.wcol-h.chain{border-top:3px solid var(--red)}
+.wcol-h.tm{border-top:3px solid var(--blue)}
+.wcards{display:flex;flex-direction:column;gap:10px;padding:13px}
+.wcard{border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:var(--surface2);position:relative}
+.wcard.brk{border-left:3px solid var(--green)}
+.wcard.fail{border-left:3px solid var(--red)}
+.wc-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-weight:700;color:var(--head);font-size:13.5px;padding-right:18px}
+.wc-top .arrow{color:var(--gold)}
+.wc-line2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px}
+.wc-stats{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:9px;font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;color:var(--txt2)}
+.wc-stats b{font-weight:700}
+.wc-stats .g{color:var(--green2)}.wc-stats .r{color:var(--red2)}
+.verdict-ok{color:var(--green2);font-weight:700;font-size:12px}
+.verdict-no{color:var(--red2);font-weight:700;font-size:12px}
+.wcard .del{position:absolute;top:9px;right:10px;background:none;border:none;color:var(--txt3);font-size:17px;line-height:1;cursor:pointer}
+.wcard .del:hover{color:var(--red)}
+.wcard .del.mv{right:34px;font-size:13px}
+.wcard .del.mv:hover{color:var(--gold)}
+.arrow{color:var(--gold);font-weight:700}
+
+/* ── summary tiles ── */
+.sumbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:12px;margin-bottom:18px}
+.sumcell{background:var(--surface);padding:14px 16px;border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh)}
+.sumcell .k{font-size:11px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--txt3)}
+.sumcell .v{font-family:'JetBrains Mono',monospace;font-size:23px;font-weight:700;color:var(--head);margin-top:5px}
+.sumcell .v small{font-size:12px;color:var(--txt3);font-weight:500}
+
+/* ── targets board ── */
+.kdrow{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr 1.1fr auto;gap:12px;align-items:center;padding:15px 18px;border-bottom:1px solid var(--line)}
+.kdrow:hover{background:var(--bg3)}
+.kdrow .knm{font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:700;color:var(--head)}
+.kdrow .kloc{font-size:11.5px;color:var(--txt3);font-weight:500;margin-top:2px}
+.kdrow .active-tag{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;color:var(--gold)}
+.cd{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;color:var(--blue)}
+.cd.soon{color:var(--amber)}.cd.exp{color:var(--txt3)}
+
+/* ── import ── */
+.drop{border:1.5px dashed var(--line2);border-radius:12px;padding:28px;text-align:center;transition:.15s;cursor:pointer;background:var(--bg3)}
+.drop:hover,.drop.drag{border-color:var(--gold);background:rgba(58,86,176,.05)}
+.drop .ic{font-size:28px;color:var(--gold);margin-bottom:8px}
+textarea{width:100%;min-height:140px;background:var(--surface);border:1px solid var(--line2);color:var(--txt);font-family:'JetBrains Mono',monospace;font-size:12px;padding:11px;border-radius:10px;outline:none;resize:vertical;line-height:1.55}
+textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(58,86,176,.14)}
+.help{font-size:13px;color:var(--txt2);line-height:1.65}
+.help code{font-family:'JetBrains Mono',monospace;font-size:11.5px;background:var(--bg2);padding:2px 6px;border-radius:5px;color:var(--gold2);border:1px solid var(--line)}
+.cols{font-family:'JetBrains Mono',monospace;font-size:11.5px;background:var(--bg3);border:1px solid var(--line);border-radius:10px;padding:11px 13px;color:var(--teal2);word-break:break-word;line-height:1.8}
+
+/* ── modal ── */
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.66);backdrop-filter:blur(4px);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:42px 18px;overflow-y:auto}
+#modal.open{display:flex}
+.mbox{background:var(--surface);border:1px solid var(--line);border-radius:16px;width:100%;max-width:560px;box-shadow:var(--sh2);animation:pop .2s cubic-bezier(.2,.8,.3,1)}
+@keyframes pop{from{opacity:0;transform:scale(.97) translateY(8px)}}
+.mbox.wide{max-width:680px}
+.mh{padding:17px 21px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.mh h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:17px;font-weight:700;color:var(--head)}
+.mh .close{background:none;border:none;color:var(--txt3);font-size:24px;cursor:pointer;line-height:1}
+.mh .close:hover{color:var(--red)}
+.mb{padding:19px 21px}
+.mf{padding:15px 21px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.frow.f3{grid-template-columns:1fr 1fr 1fr}
+.frow.f1{grid-template-columns:1fr}
+.fld label{font-size:11px;font-weight:700;letter-spacing:.01em;text-transform:uppercase;color:var(--txt3);display:block;margin-bottom:5px}
+
+/* ── assign preview ── */
+.apv{background:var(--bg3);border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:6px}
+.apv-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-family:'JetBrains Mono',monospace;font-size:13.5px;font-weight:600}
+.apv-row .k{color:var(--txt3);font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.01em;font-family:'Plus Jakarta Sans',sans-serif}
+.apv-verdict{margin-top:9px;padding:11px;border-radius:9px;text-align:center;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:800}
+.v-break{background:var(--greenbg);color:var(--green2);border:1px solid var(--greenline)}
+.v-fail{background:var(--redbg);color:var(--red2);border:1px solid var(--redline)}
+.v-na{background:var(--bg2);color:var(--txt2);border:1px solid var(--line)}
+
+.flex{display:flex;gap:10px;align-items:center}
+.between{justify-content:space-between}
+.mt{margin-top:16px}.mb12{margin-bottom:12px}
+.note{font-size:12px;color:var(--txt3);font-weight:500}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:9px;overflow:hidden;background:var(--surface)}
+.seg button{background:none;border:none;color:var(--txt2);padding:8px 14px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:12.5px;font-weight:700;transition:.13s}
+.seg button.on{background:var(--gold);color:#fff}
+.warnbox{background:var(--redbg);border:1px solid var(--redline);color:var(--red2);padding:11px 15px;border-radius:10px;font-size:12.5px;margin-bottom:14px;font-weight:600}
+.tag{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:var(--bg2);border:1px solid var(--line);color:var(--txt2)}
+a.lnk{color:var(--gold);text-decoration:none;font-weight:600;border-bottom:1px dotted var(--golddim);cursor:pointer}
+a.lnk:hover{border-bottom-style:solid}
+.empty{padding:22px;text-align:center;color:var(--txt3);font-size:13px;font-weight:500}
+details.panel summary{list-style:none}
+details.panel summary::-webkit-details-marker{display:none}
+details.panel summary::after{content:"▸";color:var(--txt3);font-size:13px}
+details.panel[open] summary::after{content:"▾"}
+
+/* workflow strip + wave band */
+.howto{background:rgba(111,140,255,.1);border:1px solid var(--golddim);color:var(--txt2);
+  border-radius:10px;padding:10px 14px;font-size:12.5px;line-height:1.5;margin-bottom:14px}
+.howto b{color:var(--head);font-weight:700}
+.waveband{margin-top:22px;border-top:2px solid var(--gold);padding-top:6px}
+.waveband-h{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 2px 14px}
+.wb-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:19px;font-weight:800;color:var(--head)}
+.wb-count{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--txt3);margin-left:6px}
+
+/* toast */
+#toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%) translateY(20px);z-index:300;
+  background:var(--surface);border:1px solid var(--line2);color:var(--txt);font-weight:600;font-size:13px;
+  padding:11px 18px;border-radius:12px;box-shadow:var(--sh2);opacity:0;pointer-events:none;transition:.25s;max-width:90vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* selected attacker + range highlight */
+.lrow{padding:8px 13px}
+.lrow.sel{background:rgba(111,140,255,.16);box-shadow:inset 3px 0 0 var(--gold)}
+.lrow.rng-in{background:var(--greenbg);box-shadow:inset 3px 0 0 var(--green)}
+.lrow.rng-out{background:var(--redbg);box-shadow:inset 3px 0 0 var(--red)}
+.lrow.rng-in .lr-sub,.lrow.rng-out .lr-sub{color:var(--txt)}
+.lrow.atk-pick,.lrow.qa{cursor:pointer}
+.leftbox{text-align:center;line-height:1.05;padding:0 2px}
+.leftbox span{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--txt3);display:block}
+.leftbox b{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700}
+.leftbox b.full{color:var(--green2)}.leftbox b.part{color:var(--gold2)}.leftbox b.none{color:var(--txt3)}
+.gtag{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--txt3)}
+/* attack list grouped by province */
+.byprov{padding:10px 14px;border-bottom:1px solid var(--line)}
+.byprov:last-child{border-bottom:none}
+.bp-name{font-weight:700;color:var(--head);font-size:14px;margin-bottom:5px;display:flex;align-items:center;gap:7px}
+.bp-name .c{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--txt3)}
+.bp-atks{display:flex;flex-direction:column;gap:4px;padding-left:4px}
+.bp-atk{font-size:12.5px;color:var(--txt2);font-family:'JetBrains Mono',monospace;font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.selhint{font-size:12px;color:var(--gold2);font-weight:600;padding:9px 13px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px;background:rgba(111,140,255,.1)}
+.selhint .clr{cursor:pointer;color:var(--txt3);font-weight:700;white-space:nowrap}
+.qtype{width:auto;display:inline-block;padding:2px 6px;font-size:11.5px;font-weight:700;border-radius:7px;margin-left:2px;vertical-align:middle}
+
+/* drag affordance */
+.lrow[draggable=true]{cursor:grab}
+.lrow.dragging{opacity:.5}
+.dropzone{min-height:54px;border:1.5px dashed var(--line2);border-radius:10px;margin:12px;padding:10px;transition:.15s}
+.dropzone.over{border-color:var(--gold);background:rgba(111,140,255,.08)}
+.tlist .lrow{padding:8px 12px}
+.star{cursor:pointer;color:var(--txt3);font-size:14px}
+.star.on{color:var(--amber)}
+
+/* ── graphs ── */
+.graph-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+@media(max-width:760px){.graph-grid{grid-template-columns:1fr}}
+.bchart{padding:12px 14px;display:flex;flex-direction:column;gap:7px}
+.bc-row{display:grid;grid-template-columns:78px 1fr 58px;align-items:center;gap:9px;font-size:11.5px}
+.bc-name{color:var(--txt2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bc-bar{height:14px;background:var(--bg2);border-radius:4px;overflow:hidden}
+.bc-fill{display:block;height:100%;border-radius:4px;min-width:2px;transition:width .4s cubic-bezier(.2,.7,.3,1)}
+.bc-val{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--head);text-align:right;font-size:11px}
+
+/* ── COMPACT LIST (provinces / targets) ── */
+.plist{display:flex;flex-direction:column}
+.lrow{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line)}
+.lrow:last-child{border-bottom:none}
+.lrow:hover{background:var(--bg3)}
+.lr-main{min-width:0;flex:1}
+.lr-name{font-weight:700;color:var(--head);font-size:13.5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;line-height:1.3}
+.lr-sub{font-size:11.5px;color:var(--txt2);font-weight:500;margin-top:2px;font-family:'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr-sub b{color:var(--txt);font-weight:700}
+.lr-ctrl{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.lr-right{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.lr-def{text-align:center;line-height:1.1}
+.lr-def span{font-size:9px;font-weight:700;color:var(--txt3);text-transform:uppercase;display:block}
+.lr-def b{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--head)}
+.lr-stats{display:flex;flex-wrap:wrap;gap:2px 14px;margin-top:5px;font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;color:var(--txt3)}
+.lr-stats b{color:var(--head);font-weight:700}
+.lr-stats b.g{color:var(--green2)}.lr-stats b.r{color:var(--red2)}
+.lrow.rng-in .lr-stats,.lrow.rng-out .lr-stats{color:var(--txt2)}
+
+.pill.sm{min-width:0;font-size:11px;padding:1px 7px}
+.opmini{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px}
+.army-out{color:var(--red2);font-weight:700}
+.army-home{color:var(--teal2)}
+
+/* mini fana/bl chips + stepper */
+.chip{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;padding:3px 7px;border-radius:7px;
+  border:1px solid var(--line2);background:var(--surface);color:var(--txt3);cursor:pointer;user-select:none;transition:.12s;line-height:1}
+.chip:hover{border-color:#aab6cb}
+.chip.on{background:var(--green);border-color:var(--green);color:#fff}
+.chip.bl.on{background:var(--red);border-color:var(--red);color:#fff}
+.chip.nocap{opacity:.3;cursor:not-allowed}
+.ministep{display:inline-flex;align-items:center;border:1px solid var(--line2);border-radius:7px;overflow:hidden;background:var(--surface)}
+.ministep button{background:none;border:none;color:var(--txt2);width:20px;height:24px;font-size:13px;cursor:pointer;line-height:1}
+.ministep button:hover{background:var(--bg2);color:var(--gold)}
+.ministep b{font-family:'JetBrains Mono',monospace;font-size:11px;padding:0 4px;min-width:16px;text-align:center;color:var(--txt)}
+
+.asg.mini{font-size:10px;padding:2px 6px;border-radius:6px}
+
+/* ── compact wave cards ── */
+.wcards{display:flex;flex-direction:column;gap:8px;padding:11px}
+.wcard{border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:var(--surface2);position:relative}
+.wcard.brk{border-left:3px solid var(--green)}
+.wcard.fail{border-left:3px solid var(--red)}
+.wc-top{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-weight:700;color:var(--head);font-size:12.5px;padding-right:16px}
+.wc-line2{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:5px}
+.wc-stats{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--txt2)}
+.wcard .del{position:absolute;top:7px;right:9px;background:none;border:none;color:var(--txt3);font-size:16px;line-height:1;cursor:pointer}
+.wcard .del:hover{color:var(--red)}
+.wcard .del.mv{right:34px;font-size:13px}
+.wcard .del.mv:hover{color:var(--gold)}
+
+/* ── topbar KD select ── */
+.kdtop{display:flex;align-items:center;gap:7px}
+.kdtop select{width:auto;max-width:190px;padding:7px 9px;font-size:12.5px}
+.kdtop .lbl{margin:0}
+
+/* ── bottom nav (mobile) ── */
+.botnav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:60;background:rgba(7,9,13,.94);
+  backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  justify-content:space-around}
+.botnav button{flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:6px 2px;cursor:pointer;color:var(--txt3);font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:700;border-radius:9px}
+.botnav button .i{font-size:18px;line-height:1}
+.botnav button.on{color:var(--gold)}
+.menu-btn,.scrim{display:none}
+
+@media(max-width:920px){
+  .view{padding:18px 16px 90px}
+  .topbar{padding:12px 14px}
+  .sumbar{grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:9px}
+}
+@media(max-width:760px){
+  #side{display:none}
+  .botnav{display:flex}
+  .topbar{padding:11px 13px}
+  .topbar h2{font-size:18px}.topbar .sub{display:none}
+  .clock{display:none}
+  .kdtop .lbl{display:none}
+  .kdtop select{max-width:none;flex:1}
+  .view{padding:14px 11px 96px}
+  .sumbar{grid-template-columns:1fr 1fr;gap:8px}
+  .sumcell{padding:11px 13px}.sumcell .v{font-size:19px}
+  .kdrow{grid-template-columns:1fr auto;gap:7px 10px}
+  .kdrow>div:nth-child(3),.kdrow>div:nth-child(4){display:none}
+  .frow,.frow.f3{grid-template-columns:1fr 1fr}
+  .mbox{max-width:100%}#modal{padding:12px 9px}
+  .lr-sub{white-space:normal}
+}
+@media(max-width:430px){.frow,.frow.f3{grid-template-columns:1fr}.sumbar{grid-template-columns:1fr 1fr}}
+
+
+.opgrid{max-height:260px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--bg3)}
+.opgrp{font-size:10.5px;font-weight:800;text-transform:uppercase;color:var(--txt3);padding:7px 4px 4px}
+.oprow{display:flex;align-items:center;gap:8px;padding:5px 4px;border-radius:7px;cursor:pointer;font-size:13px}
+.oprow:hover{background:var(--bg2)}
+.oprow span{flex:1}
+.oprow input[type=checkbox]{width:16px;height:16px;accent-color:var(--gold)}
+.oprow .opfloor{width:84px;padding:4px 7px;font-size:11px;border-radius:6px}
+details.cpanel>summary{list-style:none;cursor:pointer}
+details.cpanel>summary::-webkit-details-marker{display:none}
+details.cpanel>summary .panel-h::after{content:"\25b8";color:var(--txt3);margin-left:auto;padding-left:8px}
+details.cpanel[open]>summary .panel-h::after{content:"\25be"}
+</style>
+</head>
+<body>
+<script>
+/* HARD RESET — runs before any other script. Visit ?reset to wipe all local data. */
+(function(){
+  try{
+    if(location.search.indexOf('reset')>=0 || location.hash.indexOf('reset')>=0){
+      try{ localStorage.clear(); }catch(e){}
+      try{ sessionStorage.clear(); }catch(e){}
+      try{ if(window.indexedDB&&indexedDB.databases){ indexedDB.databases().then(function(dbs){dbs.forEach(function(d){try{indexedDB.deleteDatabase(d.name);}catch(e){}});}); } }catch(e){}
+      document.addEventListener('DOMContentLoaded',function(){
+        document.body.innerHTML='<div style="font:18px system-ui;color:#eee;background:#0b0d11;min-height:100vh;padding:60px;box-sizing:border-box"><h1 style="color:#e8b84b">✓ Local data wiped clean.</h1><p style="margin:20px 0">Your browser cache is cleared. Click below to load the fresh War Room.</p><a href="/" style="display:inline-block;color:#1a1305;background:#e8b84b;font-size:20px;font-weight:700;padding:14px 28px;border-radius:10px;text-decoration:none">Load Clean War Room →</a></div>';
+      });
+      window.__WR_RESETTING=true;
+    }
+  }catch(e){}
+})();
+</script>
+
+<div id="app">
+  <aside id="side">
+    <div class="brand"><span class="crest">◈</span><div class="wm"><h1>SavageDomain</h1><p>War Room · A115</p></div></div>
+    <nav class="nav">
+      <div class="navttl">Operations</div>
+      <button data-act="nav:wave" class="navlink"><span class="i">⚔</span> Wave Planner</button>
+      <button data-act="nav:targets" class="navlink"><span class="i">🎯</span> War Targets</button>
+      <button data-act="nav:mykd" class="navlink"><span class="i">🛡</span> My Kingdom</button>
+      <button data-act="nav:graphs" class="navlink"><span class="i">📊</span> Graphs</button>
+      <button data-act="nav:intel" class="navlink"><span class="i">🔎</span> Intel</button>
+      <button data-act="nav:reference" class="navlink"><span class="i">📖</span> Reference</button>
+      <div class="navttl">Data</div>
+      <button data-act="nav:import" class="navlink"><span class="i">📥</span> Import / Export</button>
+      <button data-act="nav:settings" class="navlink"><span class="i">⚙</span> Settings</button>
+    </nav>
+    <div class="savebar"><span class="dot" id="saveDot"></span><span id="saveTxt">storage ready</span></div>
+  </aside>
+
+  <main id="main">
+    <div class="topbar">
+      <div class="flex" style="gap:14px;min-width:0">
+        <div style="min-width:0">
+          <h2 id="topTitle">Wave Planner</h2>
+          <div class="sub" id="topSub"></div>
+        </div>
+        <div class="kdtop"><span class="lbl">Enemy KD</span><select id="kdSelect"></select></div>
+      </div>
+      <div class="clock">
+        <div id="utopiaDate" style="font-weight:700;color:var(--head)"></div>
+        <div>Tick <b id="tickNum">—</b> · <span id="realClock"></span></div>
+        <div id="realDate" style="margin-top:2px;color:var(--txt3);font-size:11px"></div>
+        <div id="lastSaved" style="margin-top:3px;color:var(--txt3)"></div>
+      </div>
+    </div>
+    <div class="view" id="view"></div>
+  </main>
+</div>
+<nav class="botnav">
+  <button data-act="nav:wave" class="botlink"><span class="i">⚔</span>Wave</button>
+  <button data-act="nav:targets" class="botlink"><span class="i">🎯</span>Targets</button>
+  <button data-act="nav:mykd" class="botlink"><span class="i">🛡</span>My KD</button>
+  <button data-act="nav:graphs" class="botlink"><span class="i">📊</span>Graphs</button>
+  <button data-act="nav:intel" class="botlink"><span class="i">🔎</span>Intel</button>
+  <button data-act="nav:reference" class="botlink"><span class="i">📖</span>Ref</button>
+  <button data-act="nav:import" class="botlink"><span class="i">📥</span>Data</button>
+  <button data-act="nav:settings" class="botlink"><span class="i">⚙</span>Settings</button>
+</nav>
+
+<div id="modal"><div class="mbox" id="mbox"></div></div>
+
+<script>
+"use strict";
+/*══════════════ STATE & PERSISTENCE ══════════════*/
+const STORE_KEY="utopia_warroom_v2";
+let storageOK=false, STATE=null;
+
+function defaultState(){
+  return {
+    v:2,
+    tick:0,
+    settings:{rangeLow:80,rangeHigh:125,ageStart:"2026-06-01T18:00:00Z",defGenerals:4,defGensAtk:1,fanaPct:5,blPct:10,
+      genOffBonus:false, refMode:"myavg", lsPerAcre:22, casRate:7.5, newsUrl:"https://utopia-game.com/wol/game/news"},
+    myKd:{name:"My Kingdom", loc:"3:4", provinces:[]},
+    enemies:{},          // id -> {id,name,loc,status,warStart,eowcfExit,note,wave:[],provinces:[]}
+    activeEnemy:null
+  };
+}
+function uid(){return Math.random().toString(36).slice(2,9)}
+
+async function load(){
+  // self-hosted storage shim: window.storage -> localStorage
+  if(!window.storage){
+    window.storage={
+      get:async(k)=>{ const v=localStorage.getItem(k); return v==null?null:{value:v}; },
+      set:async(k,v)=>{ localStorage.setItem(k,v); return true; },
+    };
+  }
+  // 1) try the server first (shared state for all admins)
+  let serverState=null;
+  try{
+    const su=(window.__WR_SYNC&&window.__WR_SYNC.syncUrl)||location.origin;
+    const sk=(window.__WR_SYNC&&window.__WR_SYNC.syncKey)||"";
+    const res=await fetch(su.replace(/\/+$/,"")+"/state?key="+encodeURIComponent(sk)+"&_="+Date.now());
+    if(res.ok){ const j=await res.json(); if(j&&(j.myKd||j.enemies)) serverState=j; }
+  }catch(e){}
+  if(serverState){
+    STATE=migrate(serverState); storageOK=true;
+    dedupEnemiesByLoc();
+    try{ await window.storage.set(STORE_KEY, JSON.stringify(STATE)); }catch(e){}
+  } else {
+    // 2) fall back to local
+    try{
+      const r=await window.storage.get(STORE_KEY);
+      storageOK=true;
+      if(r&&r.value){ STATE=migrate(JSON.parse(r.value)); }
+      else { STATE=defaultState(); await save(); }
+    }catch(err){
+      storageOK=false; STATE=defaultState();
+    }
+  }
+  // make sure sync settings are wired from the server-injected globals
+  if(window.__WR_SYNC){
+    STATE.settings=STATE.settings||{};
+    STATE.settings.syncUrl=window.__WR_SYNC.syncUrl||STATE.settings.syncUrl||location.origin;
+    STATE.settings.syncKey=window.__WR_SYNC.syncKey||STATE.settings.syncKey||"";
+  }
+}
+function looksLikeOldSample(s){
+  // conservative: only treat as sample if it's exactly the old demo shape (6-prov "Knights of the Dawn" vs "The Crimson Covenant")
+  try{
+    const names=(s.myKd&&s.myKd.provinces||[]).map(p=>p.name).join(",");
+    const oldSet="Stormhold,Ironvale,Goldspire,Thornwatch,Emberlyn,Highmarch";
+    if(s.myKd && s.myKd.name==="Knights of the Dawn" && s.myKd.provinces.length===6 && names===oldSet) return true;
+    // v2 25-prov sample (pre-TM): exact name + 25 provs + original Emberlyn offense
+    if(s.myKd && s.myKd.name==="Knights of the Dawn" && s.myKd.provinces.length===25){
+      const em=s.myKd.provinces.find(p=>p.name==="Emberlyn"); if(em && num(em.offense)===447475) return true;
+    }
+    return false;
+  }catch(e){ return false; }
+}
+function migrate(s){ const d=defaultState(); s.settings={...d.settings,...(s.settings||{})}; if(!s.enemies)s.enemies={}; if(s.tick==null)s.tick=0;
+  Object.values(s.enemies).forEach(e=>{ if(!e.warMode) e.warMode = (e.status==="war"?"in":"out"); if(!e.targets) e.targets=[]; }); return s; }
+
+let saveTimer=null;
+function scheduleSave(){ setSaveStatus("save"); clearTimeout(saveTimer); saveTimer=setTimeout(save,400); }
+
+async function pullFromServer(){
+  try{ const su=(STATE.settings.syncUrl||"").trim(); const sk=STATE.settings.syncKey||"";
+    if(!su) return;
+    const r=await fetch(su.replace(/\/+$/,"")+"/state?key="+encodeURIComponent(sk)+"&_="+Date.now());
+    const d=await r.json();
+    if(d&&(d.myKd||d.enemies)){ if(d._seq!=null) window.__WR_SEQ=d._seq; STATE=Object.assign(STATE,d); try{await window.storage.set(STORE_KEY,JSON.stringify(STATE));}catch(e){} render(); }
+  }catch(e){ console.warn("pullFromServer failed",e); }
+}
+async function save(){
+  try{ await window.storage.set(STORE_KEY, JSON.stringify(STATE)); storageOK=true; setSaveStatus("saved"); }
+  catch(e){ storageOK=false; setSaveStatus("local"); }
+}
+async function saveToServer(){
+  const su=((STATE.settings.syncUrl||window.location.origin)+"").replace(/\/+$/,"");
+  const sk=STATE.settings.syncKey||"";
+  const myN=(STATE.myKd&&STATE.myKd.provinces||[]).length, enN=Object.keys(STATE.enemies||{}).length;
+  let url=su+"/save";
+  if(myN===0 && enN===0){ if(!confirm("Your data is EMPTY. Saving will wipe the server copy. Continue?")) return; url+="?force=1"; }
+  setSaveStatus("save");
+  try{
+    const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:sk,state:JSON.stringify(STATE)})});
+    const j=await r.json().catch(()=>({}));
+    if(j.success){ toast("\u2705 Saved to server: "+j.myprovs+" provinces, "+j.enemies+" enemy KDs"); setSaveStatus("saved"); }
+    else { toast("\u26a0 Save failed: "+(j.error||("HTTP "+r.status))); setSaveStatus("local"); }
+  }catch(e){ toast("\u26a0 Save to server failed: "+e.message); setSaveStatus("local"); }
+}
+async function loadFromServer(){
+  if(!confirm("Load FROM server? This replaces your current view with the server's saved copy.")) return;
+  await pullFromServer(); toast("\u2b07 Loaded latest from server.");
+}
+function setSaveStatus(st){
+  const dot=document.getElementById("saveDot"), txt=document.getElementById("saveTxt"),
+        ls=document.getElementById("lastSaved");
+  if(!dot)return;
+  if(st==="save"){dot.className="dot save";txt.textContent="saving…";}
+  else if(st==="saved"){dot.className="dot";txt.textContent="all changes saved";
+    ls.textContent="saved "+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+  else if(st==="local"){dot.className="dot warn";txt.textContent="session-only (no storage)";
+    ls.textContent="not persisted";}
+}
+function mutate(fn){ fn(); render(); scheduleSave(); }
+
+/*══════════════ DOMAIN CONSTANTS (Age 115) ══════════════*/
+const RACES=["Avian","Dark Elf","Dwarf","Elf","Faery","Halfling","Human","Orc","Undead"];
+const PERS=["Artisan","General","Heretic","Mystic","Necromancer","Paladin","Rogue","Tactician","Warrior","War Hero"];
+const ATTACK_TYPES=[
+  {k:"march",  n:"Traditional March", note:"12% land · cap 20%"},
+  {k:"ambush", n:"Ambush",           note:"50% of acres they lost · +15% cas"},
+  {k:"plunder",n:"Plunder",          note:"50% gold / 60% food·runes"},
+  {k:"raze",   n:"Raze",             note:"~5% land (War: 30% buildings)"},
+  {k:"learn",  n:"Learn",            note:"~2.5% books (War: 35% temp)"},
+  {k:"massacre",n:"Massacre",        note:"9.5% peasants (2× in War)"},
+  {k:"conquest",n:"Conquest",        note:"6.8% land · 51% def needed"}
+];
+const TM_SPELLS=["Fireball","Lightning Strike","Meteor Showers","Tornadoes","Storms","Droughts",
+  "Pitfalls","Mystic Vortex","Land Lust","Greed","Fool's Gold","Nightmares","Vermin","Blizzard",
+  "Chastity","Gluttony","Nightfall","Amnesia","Exposure","Explosions","Magic Ward (dispel)"];
+const TM_THIEF=["Rob the Vaults","Rob the Towers","Rob the Granaries","Steal War Horses","Bribe Generals",
+  "Bribe Thieves","Night Strike","Assassinate Wizards","Sabotage Wizards","Arson","Greater Arson",
+  "Kidnap","Free Prisoners","Propaganda","Incite Riots","Spy on Throne","Spy on Military","Infiltrate"];
+const TM_OPS=[...TM_SPELLS,...TM_THIEF];
+
+function num(x){ if(x==null)return 0; if(typeof x==="number")return x;
+  const n=parseFloat(String(x).replace(/[, gc%]/gi,"")); return isNaN(n)?0:n; }
+function fmt(n){ n=Math.round(num(n)); return n.toLocaleString("en-US"); }
+function fmt1(n){ return num(n).toLocaleString("en-US",{maximumFractionDigits:1}); }
+function pctTxt(p){ return (Math.round(p*10)/10)+"%"; }
+function fmtK(n){ n=num(n); const a=Math.abs(n);
+  if(a>=1e6) return (n/1e6).toFixed(a>=1e7?0:1).replace(/\.0$/,"")+"M";
+  if(a>=1e4) return Math.round(n/1e3)+"k";
+  if(a>=1e3) return (n/1e3).toFixed(1).replace(/\.0$/,"")+"k";
+  return String(Math.round(n)); }
+
+/* fana/BL auto-eligibility + mass toggle for My Kingdom */
+function blEligible(p){ return ((p.race||"")+"").toLowerCase()==="orc" || ((p.pers||"")+"").toLowerCase()==="warrior"; }
+function allFanaOn(){ const ps=STATE.myKd.provinces||[]; if(!ps.length) return false;
+  return ps.every(p=>p.fanaOn && (!blEligible(p) || p.blOn)); }
+function toggleMassFana(){
+  const turnOn=!allFanaOn();
+  mutate(()=>{ (STATE.myKd.provinces||[]).forEach(p=>{
+    if(turnOn){ p.fana=true; p.fanaOn=true; if(blEligible(p)){ p.bl=true; p.blOn=true; } }
+    else { p.fanaOn=false; p.blOn=false; }
+  }); STATE.myKd._rev=Date.now(); });
+  toast(turnOn?"⚡ Fanaticism + Bloodlust ON (BL on Orc/Warrior)":"Fanaticism + Bloodlust cleared");
+}
+
+/* effective offense of one of my provs given its fana/bl toggles + generals model */function effOffense(p){
+  let o=num(p.offense);
+  const s=STATE.settings;
+  if(p.pers==="Warrior") o*=1.15;                 // Warrior: +15% Offensive ME (Age 115)
+  if(p.fanaOn && p.fana) o*=1+s.fanaPct/100;      // Fanaticism +5% OME
+  if(p.blOn && p.bl)     o*=1+s.blPct/100;        // Bloodlust +10% OME (Orc)
+  return Math.round(o);
+}
+function activeWave(){ const e=curEnemy(); return e?e.wave:[]; }
+function committedOff(provId){ return activeWave().filter(w=>w.attacker===provId && w.cat!=="tm").reduce((a,w)=>a+num(w.off),0); }
+function committedGen(provId){ return activeWave().filter(w=>w.attacker===provId && w.cat!=="tm").reduce((a,w)=>a+num(w.gens),0); }
+function leftoverOff(p){ return effOffense(p)-committedOff(p.id); }
+function leftoverGen(p){ return num(p.generals)-committedGen(p.id); }
+
+function myAvgNW(){ const ps=STATE.myKd.provinces; if(!ps.length)return 0;
+  return ps.reduce((a,p)=>a+num(p.nw),0)/ps.length; }
+function kdAvgNW(e){ if(!e||!e.provinces.length)return 0;
+  return e.provinces.reduce((a,p)=>a+num(p.nw),0)/e.provinces.length; }
+function kdLand(e){ return e?e.provinces.reduce((a,p)=>a+num(p.land),0):0; }
+
+/* reference NW for the enemy panel pills */
+function refNW(){
+  const s=STATE.settings;
+  if(s.refMode && s.refMode.startsWith("prov:")){
+    const p=STATE.myKd.provinces.find(x=>x.id===s.refMode.slice(5));
+    if(p) return num(p.nw);
+  }
+  return myAvgNW();
+}
+function inRange(pct){ const s=STATE.settings; return pct>=s.rangeLow && pct<=s.rangeHigh; }
+
+/* gains factor estimate (RPNW × RKNW) per Age 115 wiki */
+function rpnwF(t){ if(t<0.567)return 0; if(t<0.9)return 3*t-1.7; if(t<=1.1)return 1; if(t<1.6)return -2*t+3.2; return 0; }
+function rknwF(t){ if(t<0.5)return 0.8; if(t<0.9)return t/2+0.55; return 1; }
+function estMarchAcres(attacker, target, enemy){
+  const aNW=num(attacker.nw)||refNW(), tNW=num(target.nw);
+  if(!aNW||!tNW) return null;
+  const f=Math.max(0,Math.min(1,rpnwF(tNW/aNW)))*rknwF(kdAvgNW(enemy)/(myAvgNW()||1));
+  let ac=num(target.land)*0.12*f;
+  const cap=Math.min(num(attacker.land)*0.20, num(target.land)*0.20);
+  if(cap>0) ac=Math.min(ac,cap);
+  return Math.round(ac);
+}
+
+/* ── land / loss / rnw / overpop estimates ── */
+const TYPE_LAND={march:0.12, conquest:0.068, raze:0.05}; // fraction of target land
+function rpnwRatio(atk,tgt){ const a=(atk&&num(atk.nw))||refNW(); const t=num(tgt.nw); return a? t/a : 0; }
+function gainFactor(atk,tgt,enemy){
+  const r=rpnwRatio(atk,tgt);
+  return Math.max(0,Math.min(1,rpnwF(r)))*rknwF(kdAvgNW(enemy)/(myAvgNW()||1));
+}
+function estLandGain(atk,tgt,enemy,type){
+  if(type==="ambush"){                                   // Ambush: recover 50% of the acres they captured
+    let ac=num(tgt.incomingLand)*0.50;                   // their incoming land = acres they took from your KD
+    if(atk && atk.pers==="Tactician") ac*=1.25;          // Tactician: +25% land when ambushing
+    return Math.round(ac);                               // ignores RPNW/RKNW and the 20% cap
+  }
+  const base=TYPE_LAND[type]; if(!base || type==="raze") return 0;       // raze destroys, doesn't gain
+  let ac=num(tgt.land)*base*gainFactor(atk,tgt,enemy);
+  const war = enemy && enemy.warMode==="in";
+  if(atk && atk.race==="Orc") ac*= war?1.15:1.05;                       // Orc +15% War / +5% OOW gains
+  else if(war) ac*=1.10;                                                // generic War combat-gains
+  const cap=Math.min(num(atk?atk.land:0)*0.20, num(tgt.land)*0.20);     // 20% of smaller of acres
+  if(cap>0) ac=Math.min(ac,cap);
+  return Math.round(ac);
+}
+function estLandRemoved(atk,tgt,enemy,type){ // acres leaving target's standing land → drives overpop
+  if(type==="raze") return Math.round(num(tgt.land)*TYPE_LAND.raze);
+  if(type==="ambush") return 0;              // ambush takes their incoming haul, not their standing acres
+  return estLandGain(atk,tgt,enemy,type);
+}
+function estAttackTime(atk,tgt,enemy,type){   // ticks (estimate)
+  let t=14;                                   // base: different kingdom
+  if(enemy && enemy.warMode==="in") t*=0.85;  // War: −15% (after 12h)
+  else {                                      // out of war: NW out-of-range penalty
+    const a=(atk&&num(atk.nw))||refNW(), n=num(tgt.nw);
+    if(a && n/a*100 < 80) t*=1.20;            // Age 115 attack range starts at 80%
+  }
+  if(atk && atk.race==="Avian") t*=0.80;      // Avian −20% attack time
+  if(atk && atk.race==="Dwarf") t*=1.10;      // Dwarf +10% attack time
+  if(atk && atk.pers==="Tactician") t*=0.85;  // Tactician −15% attack time
+  return Math.round(t*10)/10;
+}
+/* derive all live numbers for a wave entry from current intel + war mode */
+function deriveAttack(e,x){
+  const atk=STATE.myKd.provinces.find(p=>p.id===x.attacker);
+  const tgt=e.provinces.find(p=>p.id===x.target);
+  if(x.cat==="tm") return {atk,tgt,tm:true};
+  const def=num(tgt?tgt.defense:0);
+  const genB=1+0.05*Math.max(0,num(x.gens)-1);          // +5% Mod Offense per general over 1
+  const modOff=Math.round(num(x.off)*genB);
+  const need=x.type==="conquest" ? Math.ceil(def*0.51) : def;  // Conquest wins at 51% of Defense
+  const willBreak=modOff>need;
+  return {atk,tgt,def,need,modOff,genB,willBreak,
+    acres: willBreak?estLandGain(atk,tgt,e,x.type):0,
+    removed: willBreak?estLandRemoved(atk,tgt,e,x.type):0,
+    loss: estOffLoss(atk,x.off,x.type),
+    rnw: atk&&tgt?rpnwRatio(atk,tgt)*100:0,
+    atime: atk&&tgt?estAttackTime(atk,tgt,e,x.type):0};
+}
+function estOffLoss(atk,offSent,type){
+  let rate=(STATE.settings.casRate||7.5)/100;
+  if(type==="ambush") rate*=1.15;                 // Ambush +15% casualties
+  if(atk && atk.race==="Undead") rate*=0.55;      // Undead −45% military losses
+  if(atk && atk.race==="Halfling") rate*=1.10;    // Halfling +10% casualties
+  return Math.round(num(offSent)*rate);
+}
+function maxPopOf(p){ // modified living space (estimate from land if not supplied)
+  if(num(p.maxpop)>0) return num(p.maxpop);
+  if(num(p.land)>0) return Math.round(num(p.land)*(STATE.settings.lsPerAcre||22));
+  return 0;
+}
+function overpopLevel(pop,maxpop){
+  if(!pop||!maxpop) return null;
+  const r=pop/maxpop;
+  if(r<=1.0005) return {lvl:0,r,label:"OK"};
+  if(r<1.15) return {lvl:1,r,label:"L1 · −peas"};
+  if(r<1.30) return {lvl:2,r,label:"L2 · no-atk"};
+  if(r<1.40) return {lvl:3,r,label:"L3 · −50% inc"};
+  return {lvl:4,r,label:"L4 · no-thv"};
+}
+const OP_CLR=["var(--txt3)","var(--amber)","var(--red2)","var(--red2)","var(--red2)"];
+function landRemovedFromTarget(targetId){
+  const e=curEnemy(); if(!e) return 0;
+  return e.wave.filter(w=>w.target===targetId && w.cat!=="tm").reduce((a,w)=>{
+    const d=deriveAttack(e,w); return a+(d.willBreak?d.removed:0);
+  },0);
+}
+function projectedOverpop(tgt){ // {now, after, removed, newMax} or null if no pop intel
+  const pop=num(tgt.pop); if(!pop) return null;
+  const maxNow=maxPopOf(tgt); if(!maxNow) return null;
+  const land=num(tgt.land); if(!land) return null;
+  const removed=landRemovedFromTarget(tgt.id);
+  const newLand=Math.max(1,land-removed);
+  const newMax=Math.round(maxNow*(newLand/land));
+  return {now:overpopLevel(pop,maxNow), after:overpopLevel(pop,newMax), removed, newMax, maxNow, pop};
+}
+function opChip(ol){
+  if(!ol) return `<span class="dim" style="font-size:10px">no pop intel</span>`;
+  const c=OP_CLR[ol.lvl];
+  return `<span class="mono" style="color:${c};font-size:11.5px;font-weight:700">${ol.label} · ${Math.round(ol.r*100)}%</span>`;
+}
+
+function curEnemy(){ return STATE.activeEnemy?STATE.enemies[STATE.activeEnemy]:null; }
+function statusBadge(st){
+  const m={war:["b-war","⚔ WAR"],hostile:["b-hostile","⚠ HOSTILE"],eowcf:["b-eowcf","🕊 EoWCF"],
+    available:["b-avail","○ TARGET"],done:["b-done","✓ DONE"]};
+  const x=m[st]||m.available; return `<span class="badge ${x[0]}">${x[1]}</span>`;
+}
+
+/*══════════════ RENDER ROUTER ══════════════*/
+let VIEW="wave";
+let selAtk=null;   // currently selected attacker prov id (for range highlighting)
+let quickType="march";  // attack type used by tap-to-assign
+let selTgt=null;
+let starOnly=false;  // show only starred (My Targets) provs in Enemy Kingdom list
+let expProv=null;   // expanded enemy card
+let mySort="default";   // sort for My Kingdom panel
+let enSort="default";   // sort for Enemy Kingdom panel
+function isTM(p){ return num(p.offense)<=0 || num(p.offense) < num(p.defense)*0.15; }  // all-def / no-off province
+const SORTS=[
+  ["default","Import order"],
+  ["atk_only","⚔ Attackers only"],
+  ["tm_only","🔮 TMs only (def, no off)"],
+  ["nw_hi","NW · highest"],["nw_lo","NW · lowest"],
+  ["off_hi","Offense · highest"],["off_lo","Offense · lowest"],
+  ["def_hi","Defense · highest"],["def_lo","Defense · lowest"],
+  ["land_hi","Land · highest"],["land_lo","Land · lowest"],
+  ["tpa_hi","TPA · highest"],["tpa_lo","TPA · lowest"],
+  ["wpa_hi","WPA · highest"],["wpa_lo","WPA · lowest"],
+  ["left_hi","Off left · highest"],
+];
+function sortProvs(list,key,isMine){
+  if(key==="default") return list;
+  if(key==="atk_only") return list.filter(p=>!isTM(p)).sort((a,b)=>(isMine?effOffense(b):num(b.offense))-(isMine?effOffense(a):num(a.offense)));
+  if(key==="tm_only")  return list.filter(p=>isTM(p)).sort((a,b)=>num(b.defense)-num(a.defense));
+  const dir=key.endsWith("_lo")?1:-1;
+  const f=key.split("_")[0];
+  const val=p=>{
+    if(f==="nw") return num(p.nw);
+    if(f==="off") return isMine?effOffense(p):num(p.offense);
+    if(f==="def") return num(p.defense);
+    if(f==="land") return num(p.land);
+    if(f==="tpa") return num(p.tpa);
+    if(f==="wpa") return num(p.wpa);
+    if(f==="left") return Math.max(0,leftoverOff(p));
+    return 0;
+  };
+  return list.slice().sort((a,b)=>dir*(val(a)-val(b)));
+}
+function sortSelect(id,cur,isMine){
+  const opts=SORTS.filter(([k])=>isMine? k!=="def_hi"&&k!=="def_lo"&&k!=="tpa_hi"&&k!=="tpa_lo"&&k!=="wpa_hi"&&k!=="wpa_lo" : k!=="left_hi");
+  return `<select id="${id}" class="qtype" style="max-width:150px">${opts.map(([k,n])=>`<option value="${k}" ${k===cur?"selected":""}>${n}</option>`).join("")}</select>`;
+}
+let graphSide="enemy";  // 'enemy' | 'mine' for Graphs tab
+const MAX_GENERALS=5;   // Utopia hard cap on generals per province
+let lastView=null;      // for animating only on tab change
+function render(){
+  // sidebar nav active
+  document.querySelectorAll(".navlink,.botlink").forEach(b=>{
+    b.classList.toggle("on", b.dataset.act==="nav:"+VIEW);
+  });
+  renderKdSelect();
+  document.getElementById("tickNum").textContent=STATE.tick;
+  const titles={wave:"Wave Planner",targets:"War Targets",mykd:"My Kingdom",graphs:"Graphs",intel:"Intel",reference:"Reference",import:"Import / Export",settings:"Settings"};
+  document.getElementById("topTitle").textContent=titles[VIEW];
+  const e=curEnemy();
+  let sub="";
+  if(VIEW==="wave"||VIEW==="targets"){
+    if(e) sub=`vs ${e.name} (${e.loc||"?"}) — enemy avg NW ${fmt(kdAvgNW(e))} · ${e.provinces.length} provs`;
+    else sub="no enemy kingdom selected";
+  } else if(VIEW==="mykd"){
+    sub=`${STATE.myKd.name} (${STATE.myKd.loc||"?"}) — avg NW ${fmt(myAvgNW())} · ${STATE.myKd.provinces.length} provs`;
+  }
+  document.getElementById("topSub").textContent=sub;
+
+  const v=document.getElementById("view");
+  const viewChanged = lastView!==VIEW;
+  const prevScroll = (typeof window!=="undefined" && window.scrollY)||0;
+  if(VIEW==="wave") v.innerHTML=viewWave();
+  else if(VIEW==="targets") v.innerHTML=viewTargets();
+  else if(VIEW==="mykd") v.innerHTML=viewMyKd();
+  else if(VIEW==="graphs") v.innerHTML=viewGraphs();
+  else if(VIEW==="intel") v.innerHTML=viewIntel();
+  else if(VIEW==="reference") v.innerHTML=viewReference();
+  else if(VIEW==="import") v.innerHTML=viewImport();
+  else if(VIEW==="settings") v.innerHTML=viewSettings();
+  v.classList.toggle("anim", viewChanged);          // entrance animation only when switching tabs
+  bindView();
+  if(!viewChanged && window.scrollTo) window.scrollTo(0, prevScroll);  // keep position on in-place updates
+  lastView=VIEW;
+}
+
+function renderKdSelect(){
+  const sel=document.getElementById("kdSelect");
+  const list=Object.values(STATE.enemies);
+  if(!list.length){ sel.innerHTML=`<option value="">— no enemy KDs —</option>`; return; }
+  sel.innerHTML=list.map(e=>`<option value="${e.id}" ${e.id===STATE.activeEnemy?"selected":""}>${esc(e.name)} (${esc(e.loc||"?")})</option>`).join("");
+}
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+/*══════════════ VIEW: WAVE PLANNER ══════════════*/
+function viewWave(){
+  const e=curEnemy();
+  if(!STATE.myKd.provinces.length && !e){
+    return emptyState("⚔","No intel loaded yet","Import your kingdom and an enemy kingdom to start planning a wave.",
+      `<button class="btn gold" data-act="nav:import">Import CSV / Data</button>
+       `);
+  }
+  if(!e){
+    return emptyState("🎯","No enemy kingdom selected","Pick or import an enemy KD to plan attacks against.",
+      `<button class="btn gold" data-act="nav:targets">War Targets</button>
+       <button class="btn ghost" data-act="nav:import">Import enemy CSV</button>`);
+  }
+  const waveCount=e.wave.length;
+  const savedCount=(e.savedWave||[]).length;
+  const myEmpty = !STATE.myKd.provinces.length
+    ? `<div class="warnbox" style="margin-bottom:14px">Your kingdom has no provinces yet — <a class="lnk" data-act="nav:import">import your KD</a> to start assigning attacks.</div>` : "";
+  return `
+  ${myEmpty}
+  <div class="howto"><b>How to build your wave:</b> ① tap one of <b>your provinces</b> → ② tap an <b>enemy target</b> to assign it (or ＋ for options) → ③ your attacks collect in <b>Your Wave</b> below. Everything saves automatically.</div>
+  <div class="flex between pwrap" style="margin-bottom:16px;flex-wrap:wrap;gap:12px">
+    <div class="flex" style="gap:10px">
+      <span class="lbl" style="margin:0;align-self:center">Mode</span>
+      <div class="seg">
+        <button data-act="warmode:in" class="${e.warMode==="in"?"on":""}">⚔ In War</button>
+        <button data-act="warmode:out" class="${e.warMode==="out"?"on":""}">🏳 Out</button>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button class="btn ghost sm" data-act="news">📰 KD News</button>
+      <button class="btn ghost sm" data-act="pastenews">📋 Paste News</button>
+      <button class="btn ghost sm" data-act="pasteintel">🔮 Paste Intel</button>
+      <button class="btn ghost sm" data-act="copywave">⧉ Copy</button>
+    </div>
+  </div>
+  <div id="summaryBar">${summaryBar()}</div>
+  <div class="planner-grid">
+    <details class="panel cpanel" open><summary>
+      <div class="panel-h"><h3>🛡 MY KINGDOM</h3><span class="flex" style="gap:7px"><span class="cnt">${esc(STATE.myKd.name)} · ${STATE.myKd.provinces.length}</span><button class="btn xs ${allFanaOn()?"gold":"ghost"}" data-act="togglemassfana" title="Fanaticism on every province + Bloodlust on Orc/Warrior (one click)">⚡${allFanaOn()?" F+BL on":" All F+BL"}</button>${sortSelect("mySort",mySort,true)}</span></div></summary>
+      ${myProvTable()}
+    </details>
+    <details class="panel cpanel" open><summary>
+      <div class="panel-h"><h3>🎯 ENEMY KINGDOM</h3><span class="flex" style="gap:7px"><span class="cnt">${esc(e.name)} · ${e.provinces.length}</span>${sortSelect("enSort",enSort,false)}<button class="btn xs ${starOnly?"gold":"ghost"}" data-act="staronly" title="Show only starred targets">⭐${starOnly?" only":""}</button></span></div></summary>
+      ${enemyTable(e)}
+    </details>
+    <div class="side-col">
+      ${targetListPanel(e)}
+      ${armyHomePanel(e)}
+    </div>
+  </div>
+  <div class="waveband">
+    <div class="waveband-h">
+      <div><span class="wb-title">📋 YOUR WAVE</span> <span class="wb-count">${waveCount} attack${waveCount===1?"":"s"} queued vs ${esc(e.name)}</span></div>
+      <div class="btnrow">
+        <button class="btn gold sm" data-act="savewave" ${waveCount?"":"disabled"}>💾 Save Wave</button>
+        ${savedCount?`<button class="btn ghost sm" data-act="restorewave">↩ Restore (${savedCount})</button>`:""}
+        <button class="btn ghost sm" data-act="exportwave">⬇ Spreadsheet</button>
+        ${waveCount?`<button class="btn ghost sm red" data-act="clearwave">🗑 Clear Wave</button>`:""}
+      </div>
+    </div>
+    ${waveLists(e)}
+  </div>
+  ${waveByProv(e)}`;
+}
+
+function waveByProv(e){
+  const groups={};
+  e.wave.forEach(w=>{ (groups[w.attacker]=groups[w.attacker]||[]).push(w); });
+  const order=STATE.myKd.provinces.map(p=>p.id);
+  const ids=Object.keys(groups).sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+  let body;
+  if(!ids.length){
+    body=`<div class="empty">No attacks assigned yet — tap a province, then tap a target above.</div>`;
+  } else {
+    body=`<div class="plist">`+ids.map(id=>{
+      const atk=mp(id), list=groups[id];
+      const items=list.map(w=>{
+        const tgt=e.provinces.find(p=>p.id===w.target);
+        if(w.cat==="tm") return `<div class="bp-atk"><span class="arrow">→</span> ${esc(tgt?tgt.name:"?")} · <span class="cat-tm">TM ${esc(w.op||"op")}</span></div>`;
+        const d=deriveAttack(e,w), at=ATTACK_TYPES.find(a=>a.k===w.type);
+        const v=d.willBreak?`<span class="verdict-ok">✓ break</span>`:`<span class="verdict-no">✗ short ${fmtK(Math.max(0,d.need-d.modOff))}</span>`;
+        return `<div class="bp-atk"><span class="arrow">→</span> ${esc(tgt?tgt.name:"?")} · <span class="cat-${w.cat}">${w.cat}</span> · ${at?at.n:w.type} · ${fmtK(w.off)} off · ${v}</div>`;
+      }).join("");
+      return `<div class="byprov"><div class="bp-name">🛡 ${esc(atk?atk.name:"Unknown prov")} <span class="c">${list.length} attack${list.length===1?"":"s"}</span></div><div class="bp-atks">${items}</div></div>`;
+    }).join("")+`</div>`;
+  }
+  return `<div class="panel" style="margin-top:18px">
+    <div class="panel-h"><h3>🗂 Attack List — by Province</h3><span class="cnt">${ids.length} prov${ids.length===1?"":"s"} attacking</span></div>
+    ${body}
+  </div>`;
+}
+
+function targetListPanel(e){
+  const targets=(e.targets||[]).map(id=>e.provinces.find(p=>p.id===id)).filter(Boolean);
+  const atk = selAtk ? STATE.myKd.provinces.find(p=>p.id===selAtk) : null;
+  const refv = atk ? num(atk.nw) : refNW();
+  const rows = targets.length ? targets.map(p=>{
+    const pct=refv?num(p.nw)/refv*100:0;
+    return `<div class="lrow ${selTgt===p.id?"sel":""}" style="cursor:pointer">
+      <div class="lr-main" data-act="seltgt:${p.id}">
+        <div class="lr-name">${esc(p.name)} <span class="pill sm ${inRange(pct)?"in":"out"}">${refv?pctTxt(pct):"—"}</span></div>
+        <div class="lr-sub">NW ${fmtK(p.nw)} · def ${fmtK(p.defense)} · ${fmtK(p.land)}A${p.armyOut?' · <span class="army-out">OUT</span>':''}</div>
+      </div>
+      <div class="lr-right">
+        <button class="btn xs gold" data-act="assign:${p.id}">＋</button>
+        <button class="btn xs ghost" data-act="target:${p.id}">★</button>
+      </div>
+    </div>`;
+  }).join("") : "";
+  return `<details class="panel cpanel" open><summary>
+    <div class="panel-h"><h3>📌 My Targets</h3><span class="cnt">${targets.length}</span></div></summary>
+    <div class="dropzone" data-dz="targets">⬇ drag an enemy here, or tap ☆ to add</div>
+    ${rows?`<div class="plist tlist">${rows}</div>`:`<div class="empty" style="padding:14px">No targets queued yet.</div>`}
+  </details>`;
+}
+
+function armyHomePanel(e){
+  const home=e.provinces.filter(p=>!p.armyOut);
+  const atk = selAtk ? STATE.myKd.provinces.find(p=>p.id===selAtk) : null;
+  const refv = atk ? num(atk.nw) : refNW();
+  const rows=home.map(p=>{
+    const pct=refv?num(p.nw)/refv*100:0;
+    return `<div class="lrow">
+      <div class="lr-main">
+        <div class="lr-name">${esc(p.name)} <span class="pill sm ${inRange(pct)?"in":"out"}">${refv?pctTxt(pct):"—"}</span></div>
+        <div class="lr-sub">NW ${fmtK(p.nw)} · def ${fmtK(p.defense)} · ${fmtK(p.land)}A</div>
+      </div>
+      <div class="lr-right"><button class="btn xs gold" data-act="assign:${p.id}">＋</button></div>
+    </div>`;
+  }).join("");
+  return `<details class="panel cpanel" open><summary>
+    <div class="panel-h"><h3>🏠 Army Home</h3><span class="cnt">${home.length} not out</span></div></summary>
+    ${home.length?`<div class="plist">${rows}</div>`:`<div class="empty" style="padding:14px">All enemy armies are out.</div>`}
+  </details>`;
+}
+
+function summaryBar(){
+  const ps=STATE.myKd.provinces;
+  const totOff=ps.reduce((a,p)=>a+effOffense(p),0);
+  const usedOff=ps.reduce((a,p)=>a+Math.min(committedOff(p.id),effOffense(p)),0);
+  const totGen=ps.reduce((a,p)=>a+num(p.generals),0);
+  const usedGen=ps.reduce((a,p)=>a+committedGen(p.id),0);
+  const w=activeWave();
+  const e=curEnemy();
+  let breaks=0, projLand=0, projLoss=0;
+  w.forEach(x=>{ if(x.cat!=="tm"){ const d=deriveAttack(e,x); if(d.willBreak){breaks++; projLand+=d.acres;} projLoss+=d.loss; } });
+  return `
+  <div class="sumbar">
+    <div class="sumcell"><div class="k">Offense left</div><div class="v">${fmt(totOff-usedOff)}<small> / ${fmt(totOff)}</small></div></div>
+    <div class="sumcell"><div class="k">Generals left</div><div class="v">${totGen-usedGen}<small> / ${totGen}</small></div></div>
+    <div class="sumcell"><div class="k">Attacks queued</div><div class="v">${w.filter(x=>x.cat!=="tm").length}<small> + ${w.filter(x=>x.cat==="tm").length} TM</small></div></div>
+    <div class="sumcell"><div class="k">Breaking hits</div><div class="v" style="color:var(--green2)">${breaks}</div></div>
+    <div class="sumcell"><div class="k">Est. land gain</div><div class="v" style="color:var(--gold2)">+${fmt(projLand)}<small> ac</small></div></div>
+    <div class="sumcell"><div class="k">Est. off losses</div><div class="v" style="color:var(--red2)">−${fmt(projLoss)}</div></div>
+  </div>`;
+}
+
+function myProvTable(){
+  const ps=sortProvs(STATE.myKd.provinces,mySort,true), e=curEnemy(), eAvg=kdAvgNW(e);
+  if(!ps.length) return `<div class="empty">No provinces. <a class="lnk" data-act="nav:mykd">Add or import your kingdom →</a></div>`;
+  const tgtSel = selTgt && e ? e.provinces.find(x=>x.id===selTgt) : null;
+  const hint = tgtSel ? `<div class="selhint"><span>Target: <b style="color:var(--head)">${esc(tgtSel.name)}</b> · def ${fmtK(tgtSel.defense)} — green = in range; tap a prov to assign</span><span class="clr" data-act="seltgt:${tgtSel.id}">clear ✕</span></div>` : "";
+  const rows=ps.map((p,idx)=>{
+    const eff=effOffense(p), lo=leftoverOff(p), lg=leftoverGen(p);
+    const pct=eAvg?num(p.nw)/eAvg*100:0;
+    const tpct=tgtSel?num(tgtSel.nw)/Math.max(1,num(p.nw))*100:0;
+    const rngCls=tgtSel?(inRange(tpct)?"rng-in":"rng-out"):"";
+    const loCls=lo>=eff?"full":(lo>0?"part":"none");
+    const lgCls=lg>=num(p.generals)?"full":(lg>0?"part":"none");
+    const fanaCap=!!p.fana, blCap=!!p.bl;
+    const isUD = (p.race||"").toLowerCase()==="undead";
+    const tmTag = isTM(p) ? ` <span class="tag" style="color:var(--blue);font-size:9.5px;padding:1px 6px">TM</span>` : "";
+    return `<div class="lrow atk-pick ${selAtk===p.id?"sel":""} ${rngCls}">
+      <div class="lr-main" data-act="selatk:${p.id}">
+        <div class="lr-name"><b>#${idx+1} ${esc(p.name)}</b>${isUD?` <span class="plague" title="Undead — spreads plague">🦠</span>`:""}${tmTag}${eAvg?` <span class="pill sm ${inRange(pct)?"in":"out"}">${pctTxt(pct)}</span>`:""}</div>
+        <div class="lr-sub">${esc(p.race||"?")}${p.pers?" · "+esc(p.pers):""} · NW <b>${fmtK(p.nw)}</b> · off <b>${fmtK(eff)}</b> · gen ${num(p.generals)}</div>
+      </div>
+      <div class="lr-ctrl">
+        <span class="chip ${fanaCap?"":"nocap"} ${p.fanaOn&&fanaCap?"on":""}" data-act="${fanaCap?"togglefana:"+p.id:""}">F</span>
+        <span class="chip bl ${blCap?"":"nocap"} ${p.blOn&&blCap?"on":""}" data-act="${blCap?"togglebl:"+p.id:""}">BL</span>
+        <span class="gtag">gens</span><span class="ministep"><button data-act="gen-:${p.id}">−</button><b>${num(p.generals)}</b><button data-act="gen+:${p.id}">＋</button></span>
+        <div class="leftbox"><span>left</span><b class="${loCls}">${fmtK(Math.max(0,lo))}</b></div>
+      </div>
+    </div>`;
+  }).join("");
+  return `${hint}<div class="plist">${rows}</div>`;
+}
+
+function enemyTable(e){
+  if(!e.provinces.length) return `<div class="empty">No enemy intel. <a class="lnk" data-act="nav:import">Import enemy CSV →</a></div>`;
+  const targets0=e.targets||[];
+  if(starOnly && !targets0.length) return `<div class="empty">⭐ Showing starred only, but no targets are starred yet.<br><a class="lnk" data-act="staronly">Show all provinces →</a></div>`;
+  const atk = selAtk ? STATE.myKd.provinces.find(p=>p.id===selAtk) : null;
+  const refv = atk ? num(atk.nw) : refNW();
+  const targets = e.targets||[];
+  const hint = atk ? `<div class="selhint"><span>Attacker: <b style="color:var(--head)">${esc(atk.name)}</b> · ${fmtK(Math.max(0,leftoverOff(atk)))} off left — tap a target to assign as <select id="quickType" class="qtype">${ATTACK_TYPES.map(a=>`<option value="${a.k}" ${a.k===quickType?"selected":""}>${a.n}</option>`).join("")}</select></span><span class="clr" data-act="selatk:${atk.id}">clear ✕</span></div>` : "";
+  let plist=sortProvs(e.provinces,enSort,false);
+  if(starOnly) plist=plist.filter(p=>targets0.includes(p.id));
+  const rows=plist.map((p,idx)=>{
+    const pct=refv?num(p.nw)/refv*100:0;
+    const inr=inRange(pct);
+    const rngCls = atk ? (inr?"rng-in":"rng-out") : "";
+    const assigned=activeWave().filter(w=>w.target===p.id);
+    const op=projectedOverpop(p);
+    const opTag = op && op.now && op.now.lvl>0 ? `<span class="opmini" style="color:${OP_CLR[op.now.lvl]};background:var(--bg2)">${op.now.label.split(" ")[0]}</span>` : "";
+    const army = p.armyOut
+      ? `<span class="army-out">⚔ OUT${p.returnTick?" t"+(num(p.returnTick)-STATE.tick):""}${p.incomingLand?" +"+fmtK(p.incomingLand)+"A":""}</span>`
+      : `<span class="army-home">⌂ home</span>`;
+    const tpa = p.tpa!=null&&p.tpa!==""?fmt1(p.tpa):"?";
+    const wpa = p.wpa!=null&&p.wpa!==""?fmt1(p.wpa):"?";
+    const cast=p.sci&&p.sci.cast!=null?p.sci.cast:null, wts=p.sci&&p.sci.wts!=null?p.sci.wts:null;
+    const exp = expProv===p.id ? `<div class="lr-stats" style="margin-top:4px;padding:6px 8px;background:var(--bg2);border-radius:7px">
+      <span>OFF <b>${p.offense?fmtK(p.offense):"?"}</b></span>
+      <span>mdTPA <b>${p.mdtpa!=null&&p.mdtpa!==""?fmt1(p.mdtpa):"?"}</b></span>
+      <span>mdWPA <b>${p.mdwpa!=null&&p.mdwpa!==""?fmt1(p.mdwpa):"?"}</b></span>
+      <span>Pop <b>${p.pop?fmtK(p.pop):"?"}</b></span>
+      <span>Honor <b>${p.honor?fmtK(p.honor):"?"}</b></span>
+      <span>Gens out <b>${p.generalsUsed||0}</b></span></div>` : "";
+    const asg = assigned.length ? `<div class="asgs" style="margin-top:6px">${assigned.map(w=>{
+        const d=deriveAttack(e,w); const cls=w.cat==="tm"?"":(d.willBreak?"brk":"fail");
+        const a2=STATE.myKd.provinces.find(x=>x.id===w.attacker);
+        return `<span class="asg mini ${cls}">${w.cat==="tm"?"TM":esc(a2?a2.name:"?")}<span class="x" data-act="delwave:${w.id}">×</span></span>`;
+      }).join("")}</div>` : "";
+    const starred = targets.includes(p.id);
+    const tmTag = isTM(p) ? ` <span class="tag" style="color:var(--blue);font-size:9.5px;padding:1px 6px">TM</span>` : "";
+    return `<div class="lrow ${rngCls} ${atk?"qa":""}" draggable="true" data-prov="${p.id}">
+      <div class="lr-main" data-act="${atk?"quickassign":"expprov"}:${p.id}">
+        <div class="lr-name"><span class="star ${starred?"on":""}" data-act="target:${p.id}">${starred?"★":"☆"}</span> <b>#${idx+1} ${esc(p.name)}</b>${tmTag} <span class="pill sm ${inr?"in":"out"}">${refv?pctTxt(pct):"—"}</span> ${opTag}</div>
+        <div class="lr-sub">${esc(p.race||"?")}${p.pers?" · "+esc(p.pers):""} · ${fmt(p.land)} Acres · ${army}</div>
+        <div class="lr-stats">
+          <span>NW <b>${fmtK(p.nw)}</b></span>
+          <span>RNW <b class="${inr?"g":"r"}">${refv?pctTxt(pct):"—"}</b></span>
+          <span>TPA <b>${tpa}</b></span>
+          <span>WPA <b>${wpa}</b></span>
+          <span>Cast <b>${cast!=null?cast+"%":"?"}</b></span>
+          <span>WT <b>${wts!=null?wts+"%":"?"}</b></span>
+        </div>
+        ${exp}${asg}
+      </div>
+      <div class="lr-right">
+        <div class="lr-def"><span>def</span><b>${fmtK(p.defense)}</b></div>
+        <button class="btn xs gold" data-act="assign:${p.id}">＋</button>
+        <button class="btn xs ghost" data-act="editenemy:${p.id}">✎</button>
+      </div>
+    </div>`;
+  }).join("");
+  return `${hint}<div class="plist">${rows}</div>`;
+}
+
+function waveLists(e){
+  return `<div class="wave-cols">
+    ${catCol(e,"mass","Mass Targets","🟡","mass")}
+    ${catCol(e,"chain","Chain Targets","🔴","chain")}
+    ${tmCol(e)}
+  </div>`;
+}
+function catCol(e,key,label,icon,cls){
+  const items=e.wave.filter(x=>x.cat===key);
+  const der=items.map(x=>deriveAttack(e,x));
+  const totGain=der.reduce((a,d)=>a+(d.willBreak?d.acres:0),0);
+  const totLoss=der.reduce((a,d)=>a+d.loss,0);
+  const brk=der.filter(d=>d.willBreak).length;
+  const sub = items.length ? `${brk}/${items.length} break \u00b7 +${fmt(totGain)} ac \u00b7 \u2212${fmt(totLoss)} loss` : "nothing assigned yet";
+  let cards;
+  if(!items.length){
+    cards=`<div class="empty">Tap <b>Assign attack</b> on a target, choose <b>${label.split(" ")[0]}</b>.</div>`;
+  } else {
+    cards=items.map((x,i)=>{
+      const d=der[i], atk=d.atk, tgt=d.tgt;
+      const at=ATTACK_TYPES.find(a=>a.k===x.type);
+      const op=tgt?projectedOverpop(tgt):null;
+      const verdict=d.willBreak?`<span class="verdict-ok">\u2713 BREAK</span>`:`<span class="verdict-no">\u2717 \u2212${fmt(d.def-num(x.off))}</span>`;
+      return `<div class="wcard ${d.willBreak?"brk":"fail"}">
+        <button class="del" data-act="delwave:${x.id}">\u00d7</button>
+        <button class="del mv" data-act="movewave:${x.id}" title="Move to ${key==="mass"?"Chain":"Mass"}">\u21c4</button>
+        <div class="wc-top">${esc(atk?atk.name:"?")} <span class="arrow">\u2192</span> ${esc(tgt?tgt.name:"?")}</div>
+        <div class="wc-line2"><span class="tag">${at?at.n:x.type}</span> <span class="mono" style="font-size:12px">${fmt(x.off)} / ${fmt(d.def)}</span> ${verdict}</div>
+        <div class="wc-stats">
+          <span>RNW <b style="color:${inRange(d.rnw)?'var(--green2)':'var(--red2)'}">${d.rnw?pctTxt(d.rnw):"\u2014"}</b></span>
+          <span class="g">+${fmt(d.acres)} ac</span>
+          <span class="r">\u2212${fmt(d.loss)}</span>
+          <span>${d.atime}t</span>
+          ${op?`<span>OP ${opChip(op.after)}</span>`:""}
+        </div>
+      </div>`;
+    }).join("");
+  }
+  return `<div class="panel"><div class="wcol-h ${cls}"><span class="t">${icon} ${label} <span class="tag">${items.length}</span></span><span class="s">${sub}</span></div><div class="wcards">${cards}</div></div>`;
+}
+function tmCol(e){
+  const items=e.wave.filter(x=>x.cat==="tm");
+  const sub=items.length?`${items.length} op${items.length>1?"s":""} queued`:"nothing assigned yet";
+  let cards;
+  if(!items.length){
+    cards=`<div class="empty">Tap <b>Assign attack</b> on a target, choose <b>TM / Op</b>.</div>`;
+  } else {
+    cards=items.map(x=>{
+      const d=deriveAttack(e,x), atk=d.atk, tgt=d.tgt;
+      const op=tgt?projectedOverpop(tgt):null;
+      return `<div class="wcard">
+        <button class="del" data-act="delwave:${x.id}">\u00d7</button>
+        <div class="wc-top">${esc(atk?atk.name:"?")} <span class="arrow">\u2192</span> ${esc(tgt?tgt.name:"?")}</div>
+        <div class="wc-line2"><span class="tag" style="color:var(--blue)">${esc(x.op||"op")}</span>${x.floor?` <span class="tag">until ${esc(x.floor)}</span>`:""}</div>
+        <div class="wc-stats">
+          <span>TPA <b>${tgt&&tgt.tpa!==""?fmt1(tgt.tpa):"?"}</b></span>
+          <span>WPA <b>${tgt&&tgt.wpa!==""?fmt1(tgt.wpa):"?"}</b></span>
+          ${op?`<span>OP ${opChip(op.now)}</span>`:""}
+        </div>
+      </div>`;
+    }).join("");
+  }
+  return `<div class="panel"><div class="wcol-h tm"><span class="t">\ud83d\udd35 TM / Ops <span class="tag">${items.length}</span></span><span class="s">${sub}</span></div><div class="wcards">${cards}</div></div>`;
+}
+
+/*══════════════ VIEW: REFERENCE (Age 115 wiki) ══════════════*/
+const REF_ATTACKS=[
+ ["Traditional March","12% of target land, capped at 20% of the smaller kingdom's acres. Also gives military & building credits.","Mod Off > Def"],
+ ["Conquest","6.8% land full hit, scales with offense vs defense. In-range (5% NW) out of war, or Tactician Enhanced Conquest in war.","51% of Def"],
+ ["Ambush","Returns 50% of the acres the target recently lost. Ignores gain mods. +15% military casualties.","Mod Off > Def"],
+ ["Plunder","Steals gold/food/runes (50% gold, 60% food & runes; up to 1.75× base). Defender casualties −50%.","Mod Off > Def"],
+ ["Learn","Steals ~2.5% of target's books; in war temporarily removes ~35% (return over 48 ticks).","Mod Off > Def"],
+ ["Raze","Destroys ~5% of target's land. In war destroys ~30% of buildings instead of land.","Mod Off > Def"],
+ ["Massacre","Kills 9.5% peasants, 7.5% thieves, 5% wizards. ~2× efficiency in war.","Mod Off > Def"],
+];
+const REF_RACES=[
+ ["Avian","12 / 10 / 16·3","−20% attack time, −25% train time/wage, −5% BE, no war horses. Dive Bomb: +2 off/spec in war."],
+ ["Dark Elf","15 / 11 / 4·12","+35% instant spell dmg, −35% rune cost, can train thieves w/ credits, −15% birth. (Defensive elite.)"],
+ ["Dwarf","10 / 10 / 15·5","+30% BE, −50% construction time, +10% attack time. Architect's Revenge: −15% raze taken / +20% raze."],
+ ["Elf","10 / 13 / 15·4","+40% WPA, +40% rune prod, +1 mana/tick in war, −20% TPA. (Strong defensive elite.)"],
+ ["Faery","10 / 10 / 4·16","+25% spell duration, +20% WPA, −5% pop. 20% enemy spells fail. (Top defensive elite.)"],
+ ["Halfling","10 / 10 / 6·12","+20% TPA, +10% pop, +1 stealth/tick, +10% military casualties."],
+ ["Human","12 / 10 / 16·3","Prisoners 2/acre, −30% learn dmg, +10% science, +40% rune cost."],
+ ["Orc","13 / 10 / 18·2","+5% gains OOW / +15% in war, −50% draft, −15% DME. Carnage random on-hit bonus."],
+ ["Undead","11 / 10 / 17·4","−45% military losses, plague immunity & spread, no food, −10% science. Death March: 45% off losses → soldiers."],
+];
+const REF_PERS=[
+ ["Artisan","+40% building capacity & production, immune to Plunder/Greed/Riots, +15% economy sci. Construction Delays: enemy BE −10% for 3 ticks after a hit."],
+ ["The General","+1 General, −20% train cost/speed, +15% enemy casualties when 2+ generals sent, +15% military sci."],
+ ["Heretic","+15% TPA, +15% WPA, −50% thief losses, +20% sabotage & spell dmg, +75% guild eff, +15% arcane sci."],
+ ["Mystic","+125% guild eff, +1 mana/tick, +25% offensive spell duration, +25% channeling sci. Above 40% mana: +20% WPA."],
+ ["Necromancer","+35% WPA, +5% OME, −50% rune cost, +25% channeling sci. Dark Pact: enemy kills → 10% wizards, 20% soldiers, 10% peasants."],
+ ["Paladin","+7.5% DME, +2 war horse strength, all land holds horses (8/acre), plague immune, +25% strategy sci. Holy Inquisition: −15% enemy science 6–8 ticks."],
+ ["Rogue","+100% thieves' dens, +20% TPA, +1 stealth/tick, all ops, +25% crime sci. Can do thievery while overpop."],
+ ["Tactician","−15% attack time, +40% spec credits, +25% draft speed, −50% ambush losses, no thieves lost on intel, +25% siege sci. Interdiction (war): destroys 10% gold, 25% runes, 20% food."],
+ ["Warrior","+15% OME, +5 merc/prisoner strength, mercs at 1:4, −50% merc cost, +25% tactics sci. Battle Cry: destroys 1% of target pop."],
+ ["War Hero","+15% honor gains, +70% honor effects, +2 off/spec strength (affects NW), +25% siege sci. Heroes' Culling: massacres kill +7% peasants, +2.5% thieves/wizards."],
+];
+const REF_MAGIC=[
+ ["Fireball","Kills 4.5–7.5% of target peasants.","Unfriendly"],
+ ["Lightning Strike","Destroys 30–65% of target runes.","Unfriendly"],
+ ["Meteor Showers","Kills peasants & troops at home each day (Mystic).","Hostile"],
+ ["Tornadoes","Destroys a portion of buildings.","Unfriendly"],
+ ["Storms","Kills ~1.5% peasants/day.","—"],
+ ["Droughts","−25% food, −15% draft, −50% horse prod.","—"],
+ ["Pitfalls","+20% defensive military casualties on target.","War"],
+ ["Land Lust","Steals up to 1.25% of enemy land.","Unfriendly"],
+ ["Greed","+25% enemy military wages & draft cost.","—"],
+ ["Fool's Gold","Destroys up to 25% of target gold (Heretic).","Unfriendly"],
+ ["Nightmares","Returns ~1.5% of training troops for 8 days (Heretic).","Unfriendly"],
+ ["Vermin","Destroys ~50% of target food.","—"],
+ ["Mystic Vortex","50% chance to nullify each active spell.","Unfriendly"],
+ ["Blizzard","−10% building effectiveness.","—"],
+ ["Chastity","−50% birth rate (Mystic).","—"],
+ ["Gluttony","+25% food required.","—"],
+ ["Nightfall","−50% enemy guild & tower eff for 8 ticks (Undead).","Unfriendly"],
+];
+const REF_THIEVERY=[
+ ["Rob the Vaults","Steals gold from target."],
+ ["Rob the Towers","Steals runes from target."],
+ ["Rob the Granaries","Steals food from target."],
+ ["Bribe Generals","Target's army refuses to attack for a time."],
+ ["Night Strike","Kills enemy troops stationed at home."],
+ ["Assassinate Wizards","Kills a portion of enemy wizards."],
+ ["Sabotage Wizards","Damages enemy wizard force / guild output."],
+ ["Arson / Greater Arson","Burns target buildings."],
+ ["Kidnap","Steals peasants from the target."],
+ ["Steal War Horses","Steals horses from the target."],
+ ["Free Prisoners","Frees/steals prisoners (vs prisoner-holders)."],
+ ["Propaganda","Converts a portion of enemy soldiers to your side."],
+ ["Incite Riots","Reduces target income / causes unrest."],
+];
+const REF_OVERPOP=[
+ ["Level 1 — >100%","Peasants desert (10% or the overpop amount, min 10); no new births."],
+ ["Level 2 — >115%","Military shuts down: army refuses to attack; troops (incl. thieves) desert up to ~5.8%/tick."],
+ ["Level 3 — >130%","Rioting: income reduced by 50%."],
+ ["Level 4 — >140%","Thieves on strike: no thievery operations possible."],
+ ["Military > Max Pop","Separate rule: army refuses to attack regardless of the levels above."],
+];
+function refTable(rows,headers){
+  return `<table><thead><tr>${headers.map((h,i)=>`<th class="${i===0?'l':'l'}">${h}</th>`).join("")}</tr></thead><tbody>${
+    rows.map(r=>`<tr>${r.map(c=>`<td class="l" style="white-space:normal">${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+}
+function refSection(title,inner,open){
+  return `<details class="panel" ${open?"open":""} style="margin-bottom:14px"><summary class="panel-h" style="cursor:pointer"><h3>${title}</h3><span class="cnt">tap to toggle</span></summary><div style="padding:4px 4px 8px">${inner}</div></details>`;
+}
+function viewReference(){
+  const formulas=`<div class="help" style="padding:14px 16px;line-height:1.85">
+    <b>Break rule:</b> Modified Offense must exceed Modified Defense by 1. <b>Conquest</b> wins at just <b>51%</b> of defense.<br>
+    <b>Modified Offense</b> = Raw Offense × (OME + General Bonus). <b>General Bonus = +5% per general over 1</b> (so 5 generals = +20%).<br>
+    <b>Gains</b> = Target Resource × Attack-Type % × RPNW × RKNW × other mods.<br>
+    <b>RPNW</b> (target NW ÷ your NW): &lt;0.567 → 0 · 0.567–0.9 → 3r−1.7 · 0.9–1.1 → 1 (full) · 1.1–1.6 → −2r+3.2 · &gt;1.6 → 0.<br>
+    <b>RKNW</b> (their KD avg ÷ your KD avg): &lt;0.5 → 0.8 · 0.5–0.9 → r/2+0.55 · &gt;0.9 → 1.<br>
+    <b>Attack time:</b> base 14h. War −15% (after 12h). Avian −20%, Tactician −15%, Dwarf +10%. Out-of-range NW adds time.<br>
+    <b>Min defense:</b> 1 per acre. <b>Casualties:</b> ~6.5–8.5% offense, 5–6.5% defense (Ambush +15%, Undead −45%).<br>
+    <b>Fanaticism</b> +5% OME / −5% DME · <b>Bloodlust</b> +10% OME, +15% kills & losses (Orc/Warrior).</div>`;
+  return `<div class="howto">Accurate Age 115 mechanics pulled from the Utopia wiki. Tap a section to expand.</div>
+    ${refSection("⚔ Combat Formulas",formulas,true)}
+    ${refSection("🎯 Attack Types",refTable(REF_ATTACKS,["Type","Effect / Gains","To win"]))}
+    ${refSection("🛡 Races  <span class='note'>(Off / Def spec · Elite att·def)</span>",refTable(REF_RACES,["Race","OS / DS / Elite","Key bonuses & penalties"]))}
+    ${refSection("👑 Personalities",refTable(REF_PERS,["Personality","Key bonuses"]))}
+    ${refSection("🔮 Offensive Magic",refTable(REF_MAGIC,["Spell","Effect","Min. relations"]))}
+    ${refSection("🗡 Thievery Operations",refTable(REF_THIEVERY,["Operation","Effect"]))}
+    ${refSection("📈 Overpopulation",refTable(REF_OVERPOP,["Trigger","Effect"]))}
+    <div class="note" style="text-align:center;padding:6px">Source: utopiawiki.com — Age 115. Values are reference estimates; in-game modifiers (science, dragons, rituals, honor) vary.</div>`;
+}
+
+/*══════════════ VIEW: INTEL ══════════════*/
+let intelKd="mine";   // 'mine' or enemy id
+let intelMode="stats";
+function viewIntel(){
+  const kds=[["mine","🛡 "+STATE.myKd.name+" (mine)"]].concat(Object.values(STATE.enemies).map(e=>[e.id,"🎯 "+e.name]));
+  if(intelKd!=="mine" && !STATE.enemies[intelKd]) intelKd="mine";
+  const isMine=intelKd==="mine";
+  const kd=isMine?STATE.myKd:STATE.enemies[intelKd];
+  const provs=kd?kd.provinces:[];
+  const TABS=[["stats","📋 Overview"],["mil","⚔ Military"],["mag","🔮 Thief/Magic"],["bld","🏛 Buildings"],["sci","🔬 Science"],["res","💰 Resources"]];
+  const sciBtn=`<div class="seg" style="flex-wrap:wrap">`+TABS.map(([k,l])=>`<button data-act="intelmode:${k}" class="${intelMode===k?"on":""}">${l}</button>`).join("")+`</div>`;
+  const picker=`<div class="flex between pwrap" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
+    <div class="flex" style="gap:8px">
+      <span class="lbl" style="margin:0;align-self:center">Kingdom</span>
+      <select id="intelKd" style="width:auto;min-width:200px">${kds.map(([k,n])=>`<option value="${k}" ${k===intelKd?"selected":""}>${esc(n)}</option>`).join("")}</select>
+    </div>
+    ${sciBtn}
+    <span class="note">${provs.length} provinces${isMine?"":" · "+(STATE.enemies[intelKd].status||"")}</span>
+  </div>`;
+  function intelTable(cols){
+    const withData=provs.filter(p=>p.intel||p.offHome||p.defHome);
+    if(!withData.length) return picker+`<div class="empty" style="padding:30px">No detailed intel stored for this kingdom yet — import a full intel CSV (the one with all the columns) and it lands here.</div>`;
+    const gi=(p,k)=>{ const v=(p.intel&&p.intel[k]!=null)?p.intel[k]:(p[k]!=null?p[k]:null); return v; };
+    const head=`<tr><th class="l">Province</th><th class="l">Race</th>`+cols.map(c=>`<th>${c[1]}</th>`).join("")+`</tr>`;
+    const rows=withData.map(p=>{
+      const cells=cols.map(c=>{ const v=gi(p,c[0]); if(v==null||v==="") return `<td class="num dim">—</td>`;
+        const f=c[2]; const out=f==="k"?fmtK(v):f==="1"?fmt1(v):f==="pct"?fmt(v)+"%":fmt(v);
+        return `<td class="num">${out}</td>`; }).join("");
+      return `<tr><td class="l"><span class="pname">${esc(p.name)}</span></td><td class="l"><span class="prace">${esc(p.race||"?")}</span></td>${cells}</tr>`;
+    }).join("");
+    return picker+`<div class="panel"><div style="overflow-x:auto"><table><thead>${head}</thead><tbody>${rows}</tbody></table></div></div>`;
+  }
+  if(intelMode==="mil"){
+    return intelTable([["offHome","OffHome","k"],["defHome","DefHome","k"],["ome","OME","pct"],["dme","DME","pct"],["opa","OPA",""],["dpa","DPA",""],["army","Army","k"],["os","OS","k"],["ds","DS","k"],["leets","Leets","k"],["horses","Horses","k"],["military","Mil","k"]]);
+  }
+  if(intelMode==="mag"){
+    return intelTable([["thieves","Thieves","k"],["wizards","Wizards","k"],["rtpa","rTPA","1"],["otpa","oTPA","1"],["dtpa","dTPA","1"],["rwpa","rWPA","1"],["owpa","oWPA","1"],["dwpa","dWPA","1"],["be","BE","pct"]]);
+  }
+  if(intelMode==="bld"){
+    return intelTable([["bHome","Home","pct"],["bFarm","Farm","pct"],["bBank","Bank","pct"],["bCast","Cast","pct"],["bGuil","Guild","pct"],["bTowe","Tower","pct"],["bWTs","WT","pct"],["bUniv","Univ","pct"],["bStab","Stable","pct"],["bArms","Armory","pct"],["bTGs","TG","pct"],["bDung","Dung","pct"]]);
+  }
+  if(intelMode==="res"){
+    return intelTable([["gcs","GCs","k"],["food","Food","k"],["runes","Runes","k"],["tb","TB","k"],["peons","Peons","k"],["sos","SoS","k"],["infil","Infil","k"],["som","SoM","k"]]);
+  }
+  if(intelMode==="sci"){
+    const SCICOLS=[["sAlche","Alch"],["sTools","Tool"],["sHousi","Hous"],["sProdu","Prod"],["sBookk","Book"],["sArtis","Arti"],["sStrat","Strat"],["sSiege","Sieg"],["sTacti","Tact"],["sValor","Valor"],["sHeroi","Hero"],["sResil","Resil"],["sCrime","Crime"],["sChann","Chan"],["sShiel","Shiel"],["sCunni","Cunn"],["sSorce","Sorc"],["sFines","Fines"]];
+    const withSci=provs.filter(p=>(p.intel&&Object.keys(p.intel).some(k=>k.startsWith("s")))||p.sci);
+    if(!withSci.length) return picker+`<div class="empty" style="padding:30px">No science intel stored — import a full intel CSV (with Alche/Tools/Housi… columns) or it arrives via live sync SoS.</div>`;
+    const gi=(p,k)=>{ if(p.intel&&p.intel[k]!=null) return p.intel[k]; const o=k.replace(/^s/,"").toLowerCase(); if(p.sci&&p.sci[o]!=null) return p.sci[o]; return null; };
+    const head=`<tr><th class="l">Province</th>${SCICOLS.map(c=>`<th>${c[1]}</th>`).join("")}<th>BE</th></tr>`;
+    const rows=withSci.map(p=>{ const be=(p.intel&&p.intel.be!=null)?p.intel.be:(p.sci&&p.sci.be!=null?p.sci.be:null);
+      return `<tr><td class="l"><span class="pname">${esc(p.name)}</span></td>${SCICOLS.map(c=>{const v=gi(p,c[0]);return `<td class="num">${v!=null?fmt1(v):"—"}</td>`;}).join("")}<td class="num dim">${be!=null?fmt(be)+"%":"—"}</td></tr>`;
+    }).join("");
+    return picker+`<div class="panel"><div style="overflow-x:auto"><table><thead>${head}</thead><tbody>${rows}</tbody></table></div></div>`;
+  }
+  if(!provs.length) return picker+emptyState("🔎","No intel stored","Import provinces for this kingdom.",`<button class="btn gold" data-act="nav:import">Import data</button>`);
+  const sum=fn=>provs.reduce((a,p)=>a+num(fn(p)),0);
+  const totals=`<div class="sumbar">
+    <div class="sumcell"><div class="k">Provinces</div><div class="v">${provs.length}</div></div>
+    <div class="sumcell"><div class="k">Total NW</div><div class="v">${fmtK(sum(p=>p.nw))}</div></div>
+    <div class="sumcell"><div class="k">Total Land</div><div class="v">${fmtK(sum(p=>p.land))} <small>A</small></div></div>
+    <div class="sumcell"><div class="k">Avg NW</div><div class="v">${fmtK(sum(p=>p.nw)/provs.length)}</div></div>
+    <div class="sumcell"><div class="k">${isMine?"Total Eff Off":"Total Def"}</div><div class="v">${fmtK(isMine?provs.reduce((a,p)=>a+effOffense(p),0):sum(p=>p.defense))}</div></div>
+  </div>`;
+  const head=isMine
+    ? `<tr><th class="l">Province</th><th class="l">Race · Pers</th><th>NW</th><th>Land</th><th>Off (eff)</th><th>Def</th><th>Gens</th><th>Honor</th><th></th></tr>`
+    : `<tr><th class="l">Province</th><th class="l">Race · Pers</th><th>NW</th><th>Land</th><th>DefHome</th><th>OffHome</th><th>DME</th><th>OME</th><th>oTPA</th><th>dTPA</th><th>Pop%</th><th class="l">Army</th><th></th></tr>`;
+  const rows=provs.map(p=>{
+    const rp=`${esc(p.race||"?")}${p.pers?" · "+esc(p.pers):""}`;
+    if(isMine) return `<tr>
+      <td class="l"><span class="pname">${esc(p.name)}</span></td><td class="l"><span class="prace">${rp}</span></td>
+      <td class="num">${fmt(p.nw)}</td><td class="num">${fmt(p.land)}</td>
+      <td class="num" style="color:var(--gold2)">${fmt(effOffense(p))}</td><td class="num">${fmt(p.defense)}</td>
+      <td class="num">${num(p.generals)}</td><td class="num dim">${p.honor?fmt(p.honor):"—"}</td>
+      <td><button class="btn xs ghost" data-act="editprov:${p.id}">✎</button></td></tr>`;
+    const army=p.armyOut?`<span class="army-out">OUT t${num(p.returnTick)||"?"}${p.incomingLand?" +"+fmtK(p.incomingLand)+"A":""}</span>`:`<span class="army-home">home</span>`;
+    return `<tr>
+      <td class="l"><span class="pname">${esc(p.name)}</span></td><td class="l"><span class="prace">${rp}</span></td>
+      <td class="num">${fmt(p.nw)}</td><td class="num">${fmt(p.land)}</td>
+      <td class="num" style="color:var(--head);font-weight:700">${p.defHome?fmt(p.defHome):(p.defense?fmt(p.defense):"—")}</td><td class="num dim">${p.offHome?fmt(p.offHome):(p.offense?fmt(p.offense):"—")}</td>
+      <td class="num dim">${p.dme?fmt(p.dme)+"%":"—"}</td><td class="num dim">${p.ome?fmt(p.ome)+"%":"—"}</td>
+      <td class="num">${p.otpa?fmt1(p.otpa):"?"}</td>
+      <td class="num">${p.dtpa?fmt1(p.dtpa):"?"}</td>
+      <td class="num dim">${p.poppct?fmt(p.poppct)+"%":"—"}</td>
+      <td class="l" style="font-size:11px">${army}</td>
+      <td><button class="btn xs ghost" data-act="intel-edit:${p.id}">✎</button></td></tr>`;
+  }).join("");
+  return picker+totals+`<div class="panel"><div style="overflow-x:auto"><table><thead>${head}</thead><tbody>${rows}</tbody></table></div></div>`;
+}
+
+/*══════════════ VIEW: GRAPHS ══════════════*/
+function barChart(title,items,color,fmtFn){
+  const f=fmtFn||fmtK;
+  const sorted=items.filter(i=>i.val>0).sort((a,b)=>b.val-a.val);
+  if(!sorted.length) return `<div class="panel"><div class="panel-h"><h3>${title}</h3></div><div class="empty" style="padding:16px">No data — add this field in enemy intel.</div></div>`;
+  const max=Math.max(1,...sorted.map(i=>i.val));
+  const rows=sorted.map(i=>`<div class="bc-row"><span class="bc-name">${esc(i.name)}</span><span class="bc-bar"><span class="bc-fill" style="width:${Math.max(2,i.val/max*100)}%;background:${color}"></span></span><span class="bc-val">${f(i.val)}</span></div>`).join("");
+  return `<div class="panel"><div class="panel-h"><h3>${title}</h3><span class="cnt">${sorted.length}</span></div><div class="bchart">${rows}</div></div>`;
+}
+function kdTotals(provs,isMine){
+  const sum=fn=>provs.reduce((a,p)=>a+num(fn(p)),0);
+  return {
+    nw:sum(p=>p.nw), land:sum(p=>p.land), honor:sum(p=>p.honor),
+    off:provs.reduce((a,p)=>a+(isMine?effOffense(p):num(p.offense)),0),
+    def:sum(p=>p.defense), wiz:sum(p=>num(p.wpa)*num(p.land)), thieve:sum(p=>num(p.tpa)*num(p.land)),
+    n:provs.length
+  };
+}
+function compareChart(title,myVal,enVal,fmtFn){
+  const f=fmtFn||fmtK, max=Math.max(myVal,enVal,1);
+  const row=(lbl,val,color)=>`<div class="bc-row"><span class="bc-name">${lbl}</span><span class="bc-bar"><span class="bc-fill" style="width:${Math.max(2,val/max*100)}%;background:${color}"></span></span><span class="bc-val">${f(val)}</span></div>`;
+  return `<div class="panel"><div class="panel-h"><h3>${title}</h3></div><div class="bchart">${row("🛡 Mine",myVal,"var(--gold)")}${row("🎯 Enemy",enVal,"var(--red)")}</div></div>`;
+}
+function killStats(e){
+  let attacks=0,breaks=0,masses=0,land=0,peas=0,thieves=0,wiz=0,popDestroy=0;
+  const war=e.warMode==="in";
+  e.wave.forEach(x=>{
+    if(x.cat==="tm") return;
+    attacks++;
+    const d=deriveAttack(e,x), tgt=d.tgt, atk=d.atk; if(!tgt) return;
+    if(!d.willBreak) return;
+    breaks++; land+=d.acres;
+    if(atk && atk.pers==="Warrior" && num(tgt.pop)) popDestroy+=num(tgt.pop)*0.01;   // Battle Cry
+    if(x.type==="massacre"){
+      masses++;
+      const tLand=num(tgt.land), tThieves=num(tgt.tpa)*tLand, tWiz=num(tgt.wpa)*tLand;
+      const tPeas=Math.max(0,num(tgt.pop)-tThieves-tWiz);
+      let pP=0.095,pT=0.075,pW=0.05;
+      if(atk && atk.pers==="War Hero"){ pP+=0.07; pT+=0.025; pW+=0.025; }            // Heroes' Culling
+      const mult=war?2:1;
+      peas+=tPeas*pP*mult; thieves+=tThieves*pT*mult; wiz+=tWiz*pW*mult;
+    }
+  });
+  return {attacks,breaks,masses,land:Math.round(land),peas:Math.round(peas),thieves:Math.round(thieves),wiz:Math.round(wiz),popDestroy:Math.round(popDestroy)};
+}
+function killCounterPanel(e){
+  const k=killStats(e);
+  const cell=(lbl,val,clr)=>`<div class="sumcell"><div class="k">${lbl}</div><div class="v" ${clr?`style="color:${clr}"`:""}>${val}</div></div>`;
+  return `<div class="panel" style="margin-bottom:16px">
+    <div class="panel-h"><h3>💀 Kill Counter</h3><span class="cnt">from your wave vs ${esc(e.name)}</span></div>
+    <div class="sumbar" style="margin:0;padding:14px">
+      ${cell("Attacks",k.attacks)}
+      ${cell("Breaks",k.breaks,"var(--green2)")}
+      ${cell("Massacres",k.masses,"var(--red2)")}
+      ${cell("Land captured",fmtK(k.land)+" A","var(--green2)")}
+      ${cell("Peasants killed",fmtK(k.peas))}
+      ${cell("Thieves killed",fmtK(k.thieves))}
+      ${cell("Wizards killed",fmtK(k.wiz))}
+      ${k.popDestroy?cell("Pop destroyed",fmtK(k.popDestroy)):""}
+    </div>
+    <div class="note" style="padding:0 14px 13px">Estimates from breaking attacks in your current wave. Massacres use 9.5% peasants · 7.5% thieves · 5% wizards (×2 in war), plus personality bonuses.</div>
+  </div>`;
+}
+function viewGraphs(){
+  const e=curEnemy();
+  const mode = (graphSide==="mine"||graphSide==="totals")?graphSide:"enemy";
+  const toggle=`<div class="flex between pwrap" style="margin-bottom:16px;gap:12px">
+    <div class="seg">
+      <button data-act="graphside:enemy" class="${mode==="enemy"?"on":""}">🎯 Enemy KD</button>
+      <button data-act="graphside:mine" class="${mode==="mine"?"on":""}">🛡 My KD</button>
+      <button data-act="graphside:totals" class="${mode==="totals"?"on":""}">⚖ KD Totals</button>
+    </div>
+    <span class="note">${mode==="totals"?"whole-kingdom comparison":esc(mode==="mine"?STATE.myKd.name:(e?e.name:"—"))}</span>
+  </div>`;
+  const kc = e ? killCounterPanel(e) : "";
+
+  if(mode==="totals"){
+    const mine=STATE.myKd.provinces, en=e?e.provinces:[];
+    if(!mine.length && !en.length) return toggle+kc+emptyState("📊","No kingdoms to compare","Import your KD and an enemy KD.",`<button class="btn gold" data-act="nav:import">Import data</button>`);
+    const mt=kdTotals(mine,true), et=kdTotals(en,false);
+    const charts=[
+      compareChart("Total Networth",mt.nw,et.nw),
+      compareChart("Total Land (A)",mt.land,et.land),
+      compareChart("Total Honor",mt.honor,et.honor),
+      compareChart("Total Offense",mt.off,et.off),
+      compareChart("Total Defense",mt.def,et.def),
+      compareChart("Total Wizards (≈ WPA×A)",mt.wiz,et.wiz),
+      compareChart("Total Thieves (≈ TPA×A)",mt.thieve,et.thieve),
+      compareChart("Avg NW / Acre",mt.land?mt.nw/mt.land:0,et.land?et.nw/et.land:0,n=>fmt(Math.round(n))),
+    ].join("");
+    return toggle+kc+`<div class="note" style="margin-bottom:10px">🛡 <b>${esc(STATE.myKd.name)}</b> (${mt.n}) vs 🎯 <b>${esc(e?e.name:"—")}</b> (${et.n})</div><div class="graph-grid">${charts}</div>`;
+  }
+
+  const useMine = mode==="mine";
+  const provs = useMine ? STATE.myKd.provinces : (e?e.provinces:[]);
+  if(!provs.length) return toggle+kc+emptyState("📊","No provinces to chart",useMine?"Add or import your kingdom.":"Select or import an enemy KD.",
+    `<button class="btn gold" data-act="nav:import">Import data</button>`);
+  const g=(fn)=>provs.map(p=>({name:p.name,val:Math.round(num(fn(p)))}));
+  const nwpa=()=>provs.map(p=>({name:p.name,val:num(p.land)?Math.round(num(p.nw)/num(p.land)):0}));
+  const charts=[
+    barChart("Networth", g(p=>p.nw), "var(--gold)"),
+    barChart("Land (A)", g(p=>p.land), "var(--teal)"),
+    barChart("Honor", g(p=>p.honor), "var(--amber)"),
+    barChart(useMine?"Offense (effective)":"Offense", g(p=>useMine?effOffense(p):p.offense), "var(--red)"),
+    barChart("Defense", g(p=>p.defense), "var(--green)"),
+    barChart("Wizards (≈ WPA × A)", g(p=>num(p.wpa)*num(p.land)), "var(--blue)"),
+    barChart("Thieves (≈ TPA × A)", g(p=>num(p.tpa)*num(p.land)), "#e0a52e"),
+    barChart("NW / Acre", nwpa(), "var(--gold2)", n=>fmt(n)),
+  ].join("");
+  return toggle+kc+`<div class="graph-grid">${charts}</div>`;
+}
+
+/*══════════════ VIEW: WAR TARGETS ══════════════*/
+function viewTargets(){
+  const list=Object.values(STATE.enemies);
+  const head=`<div class="flex between mb12" style="margin-bottom:16px">
+    <div class="note">Switch the active KD to load its stored intel into the planner. Set status & EoWCF exit per KD.</div>
+    <button class="btn gold sm" data-act="addenemy">+ Add Enemy KD</button></div>`;
+  if(!list.length) return head+emptyState("🎯","No enemy kingdoms stored","Add a KD manually or import enemy intel.",
+    `<button class="btn gold" data-act="addenemy">+ Add Enemy KD</button><button class="btn ghost" data-act="nav:import">Import CSV</button>`);
+  const myA=myAvgNW();
+  const rows=list.map(e=>{
+    const avg=kdAvgNW(e);
+    const pct=myA?avg/myA*100:0;
+    const land=kdLand(e);
+    let cd="";
+    if(e.status==="eowcf" && e.eowcfExit){
+      cd=`<span class="cd" data-exit="${e.eowcfExit}">${eowcfText(e.eowcfExit)}</span>`;
+    }
+    const out=e.provinces.filter(p=>p.armyOut).length;
+    return `<div class="kdrow">
+      <div><div class="knm">${esc(e.name)} ${e.id===STATE.activeEnemy?'<span class="active-tag">● ACTIVE</span>':''}</div><div class="kloc">${esc(e.loc||"?")} · ${e.provinces.length} provs${out?` · ${out} army out`:""}</div></div>
+      <div>${statusBadge(e.status)}</div>
+      <div class="num" style="text-align:left">avg NW<br><b style="color:var(--head)">${fmt(avg)}</b></div>
+      <div class="num" style="text-align:left">land<br><b style="color:var(--head)">${fmt(land)}</b></div>
+      <div style="text-align:left"><span class="lbl" style="margin:0">vs you</span><br><span class="pill ${inRange(pct)?"in":"out"}">${myA?pctTxt(pct):"—"}</span> ${cd}</div>
+      <div class="btnrow" style="justify-content:flex-end">
+        ${e.id===STATE.activeEnemy?'<button class="btn sm" data-act="nav:wave">Plan ⚔</button>':`<button class="btn sm gold" data-act="switchkd:${e.id}">View</button>`}
+        <button class="btn xs ghost" data-act="editkd:${e.id}">✎</button>
+        <button class="btn xs ghost red" data-act="delkd:${e.id}">🗑</button>
+      </div>
+    </div>`;
+  }).join("");
+  return head+`<div class="panel"><div class="panel-h"><h3>🏰 Kingdoms</h3><span class="cnt">${list.length} stored</span></div>${rows}</div>`;
+}
+
+/*══════════════ VIEW: MY KINGDOM ══════════════*/
+function viewMyKd(){
+  const head=`<div class="flex between" style="margin-bottom:16px">
+    <div class="flex" style="gap:12px">
+      <button class="btn gold sm" data-act="addprov">+ Add Province</button>
+      <button class="btn ghost sm" data-act="nav:import">Import CSV</button>
+      <button class="btn ghost sm" data-act="editmymeta">Edit KD name</button>
+    </div>
+    <div class="note">Toggles for Fana/BL and generals live in the Wave Planner.</div></div>`;
+  const ps=STATE.myKd.provinces;
+  if(!ps.length) return head+emptyState("🛡","Your kingdom is empty","Add provinces or import your KD CSV.",
+    `<button class="btn gold" data-act="addprov">+ Add Province</button>`);
+  const rows=ps.map((p,idx)=>{
+    const blCap = !!p.bl;
+    return `<tr>
+      <td class="l"><div class="pname">${esc(p.name)}</div></td>
+      <td class="l prace">${esc(p.race||"—")}</td>
+      <td class="l prace">${esc(p.pers||"—")}</td>
+      <td class="num">${fmt(p.land)}</td>
+      <td class="num">${fmt(p.nw)}</td>
+      <td class="num" style="color:var(--gold2)">${fmt(p.offense)}</td>
+      <td class="num">${fmt(p.defense)}</td>
+      <td class="num">${num(p.generals)}</td>
+      <td>${p.fana?'<span class="tag" style="color:var(--green2)">FANA</span>':''} ${blCap?'<span class="tag" style="color:var(--red2)">BL</span>':''}</td>
+      <td class="l"><button class="btn xs ghost" data-act="editprov:${p.id}">✎</button> <button class="btn xs ghost red" data-act="delprov:${p.id}">🗑</button></td>
+    </tr>`;
+  }).join("");
+  return head+`<div class="panel"><div class="panel-h"><h3>🛡 ${esc(STATE.myKd.name)}</h3><span class="cnt">${ps.length} provs · total off ${fmt(ps.reduce((a,p)=>a+num(p.offense),0))}</span></div>
+    <div style="overflow-x:auto"><table><thead><tr>
+    <th class="l">Province</th><th class="l">Race</th><th class="l">Personality</th><th>Land</th><th>NW</th><th>Offense</th><th>Defense</th><th>Gens</th><th class="l">Can cast</th><th class="l"></th>
+    </tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
+
+/*══════════════ VIEW: IMPORT / EXPORT ══════════════*/
+function viewImport(){
+  return `
+  <div class="grid2">
+    <div>
+      <div class="panel mb12" style="margin-bottom:18px">
+        <div class="panel-h"><h3>🛡 Import My Kingdom</h3></div>
+        <div style="padding:16px">
+          <div class="drop" data-drop="my"><div class="ic">⬆</div><div>Drop CSV here or click to choose</div>
+            <input type="file" accept=".csv,.txt" id="fileMy" style="display:none"></div>
+          <p class="lbl" style="margin:14px 0 6px">…or paste rows</p>
+          <textarea id="pasteMy" placeholder="province,race,personality,land,networth,offense,defense,generals,fana,bloodlust"></textarea>
+          <div class="btnrow" style="margin-top:10px">
+            <button class="btn gold sm" data-act="importmy">Import to My KD</button>
+            <button class="btn ghost sm" data-act="dltemplate:my">Download template</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h3>🎯 Import Enemy Kingdom</h3></div>
+        <div style="padding:16px">
+          <div class="frow" style="margin-bottom:12px">
+            <div class="fld"><label>KD name</label><input type="text" id="enmName" placeholder="The Crimson Order"></div>
+            <div class="fld"><label>Location</label><input type="text" id="enmLoc" placeholder="4:12"></div>
+          </div>
+          <div class="drop" data-drop="enemy"><div class="ic">⬆</div><div>Drop enemy CSV here or click</div>
+            <input type="file" accept=".csv,.txt" id="fileEnemy" style="display:none"></div>
+          <p class="lbl" style="margin:14px 0 6px">…or paste rows</p>
+          <textarea id="pasteEnemy" placeholder="province,race,personality,land,networth,honor,defense,offense,tpa,mtpa,wpa,mwpa,population,max_pop,army_out,return_tick,incoming_land,generals_used"></textarea>
+          <div class="btnrow" style="margin-top:10px">
+            <button class="btn gold sm" data-act="importenemy">Import as new enemy KD</button>
+          </div><div class="frow" style="margin-top:14px;gap:8px;padding:12px;background:rgba(255,200,80,.08);border-radius:10px">
+          <button class="btn gold" data-act="savetoserver">\u2b06 Save to Server</button>
+          <button class="btn ghost" data-act="loadfromserver">\u2b07 Load from Server</button>
+          <span class="dim" style="font-size:11px;align-self:center">Import first, then click Save to Server to sync</span>
+            ${curEnemy()?`<button class="btn ghost sm" data-act="importenemymerge">Merge into ${esc(curEnemy().name)}</button>`:""}
+            <button class="btn ghost sm" data-act="dltemplate:enemy">Download template</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="panel mb12" style="margin-bottom:18px">
+        <div class="panel-h"><h3>📑 CSV Format</h3></div>
+        <div style="padding:16px" class="help">
+          <p style="margin-bottom:6px"><b style="color:var(--head)">My Kingdom columns</b> (header row required, order-free):</p>
+          <div class="cols mb12" style="margin-bottom:14px">province · race · personality · land · networth · offense · defense · generals · fana · bloodlust</div>
+          <p style="margin-bottom:6px"><b style="color:var(--head)">Enemy columns</b>:</p>
+          <div class="cols mb12" style="margin-bottom:14px">province · race · personality · land · networth · honor · defense · offense · tpa · mtpa · wpa · mwpa · population · max_pop · army_out · return_tick · incoming_land · generals_used</div>
+          <p class="note">Columns are matched fuzzily — <code>acres</code>=<code>land</code>, <code>nw</code>=<code>networth</code>, <code>def</code>=<code>defense</code>, <code>off</code>=<code>offense</code>, <code>gens</code>=<code>generals</code>. Booleans accept yes/y/1/x/true. Numbers may contain commas/“gc”. <code>defense</code> = modified defense (the break number).</p>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h3>💾 Backup & Reset</h3></div>
+        <div style="padding:16px">
+          <p class="help mb12" style="margin-bottom:12px">Everything is auto-saved to this artifact's storage and reloads when you return. Use these to move data or start fresh.</p>
+          <div class="btnrow">
+            <button class="btn gold sm" data-act="exportjson">⬇ Export all (JSON)</button>
+            <button class="btn ghost sm" data-act="importjsonpick">⬆ Restore JSON</button>
+            
+            <button class="btn ghost sm red" data-act="clearall">🗑 Clear everything</button>
+          </div>
+          <input type="file" accept=".json" id="fileJson" style="display:none">
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/*══════════════ VIEW: SETTINGS ══════════════*/
+function viewSettings(){
+  const s=STATE.settings;
+  return `<div class="panel" style="max-width:640px">
+    <div class="panel-h"><h3>⚙ Planner Settings</h3></div>
+    <div style="padding:18px">
+      <div class="frow">
+        <div class="fld"><label>In-range LOW % (green)</label><input type="number" id="set_rl" value="${s.rangeLow}"></div>
+        <div class="fld"><label>In-range HIGH % (green)</label><input type="number" id="set_rh" value="${s.rangeHigh}"></div>
+      </div>
+      <p class="note mb12" style="margin-bottom:16px">Targets whose NW falls inside this band (relative to the reference) show green; outside shows red. Game default break range is ~85–117.6%; many players plan 85–130%.</p>
+      <div class="frow f3">
+        <div class="fld"><label>Default generals / prov</label><input type="number" id="set_dg" value="${s.defGenerals}"></div>
+        <div class="fld"><label>Default gens / attack</label><input type="number" id="set_dga" value="${s.defGensAtk}"></div>
+      </div><div class="frow">
+        <div class="fld"><label>Live Sync URL (intel server)</label><input type="text" id="set_sync" value="${esc(s.syncUrl||"")}" placeholder="http://your-host:8108"></div>
+        <div class="fld"><label>Live Sync key (optional)</label><input type="text" id="set_synckey" value="${esc(s.syncKey||"")}"></div>
+        <div class="fld"><label>Current tick</label><input type="number" id="set_tick" value="${STATE.tick}"></div>
+      </div>
+      <div class="frow">
+        <div class="fld"><label>Age 115 start (your local time — sets the Utopian calendar)</label><input type="datetime-local" id="set_agestart" value="${esc(toLocalDT(s.ageStart||""))}"></div>
+        <div class="fld"><label>&nbsp;</label><div class="note" style="padding-top:9px">Utopian date = ${esc(utopianDate(new Date()).label)} (24 days/month, Jan–Jul, 1 day = 1 hr)</div></div>
+      </div>
+      <div class="frow">
+        <div class="fld"><label>Fanaticism offense %</label><input type="number" id="set_fp" value="${s.fanaPct}"></div>
+        <div class="fld"><label>Bloodlust offense %</label><input type="number" id="set_bp" value="${s.blPct}"></div>
+      </div>
+      <p class="note">Age 115: Fanaticism = +5% OME / −5% DME · Bloodlust = +10% OME, +15% kills & own losses (Orc / Warrior).</p>
+      <div style="border-top:1px solid var(--line);margin:16px 0"></div>
+      <div class="frow">
+        <div class="fld"><label>Off casualty rate %</label><input type="number" step="0.1" id="set_cas" value="${s.casRate}"></div>
+        <div class="fld"><label>Living space / acre (est)</label><input type="number" id="set_ls" value="${s.lsPerAcre}"></div>
+      </div>
+      <p class="note">Off casualty rate drives the “off losses” estimate (Age 115 base 6.5–8.5%; Ambush & Orc add +15%). Living space/acre estimates Max Pop when you haven't entered it, for the overpop calc. Overpop: L1 &gt;100% (−peasants), L2 &gt;115% (army can't attack), L3 &gt;130% (−50% income), L4 &gt;140% (no thievery).</p>
+      <div class="mf" style="border:none;padding:18px 0 0;justify-content:flex-start">
+        <button class="btn gold" data-act="savesettings">Save settings</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function emptyState(icon,title,sub,btns){
+  return `<div style="text-align:center;padding:70px 20px">
+    <div style="font-size:48px;color:var(--gold);opacity:.7;margin-bottom:14px">${icon}</div>
+    <div class="cz" style="font-size:22px;color:var(--head);margin-bottom:8px">${title}</div>
+    <div style="color:var(--txt2);margin-bottom:22px">${sub}</div>
+    <div class="btnrow" style="justify-content:center">${btns}</div></div>`;
+}
+
+/*══════════════ EVENT BINDING ══════════════*/
+function bindView(){
+  // file inputs / dropzones
+  function depositCSV(which,txt){
+    const ta=document.getElementById(which==="my"?"pasteMy":"pasteEnemy"); if(ta)ta.value=txt;
+    // auto-import immediately: my KD replaces; enemy merges into the active KD if one is selected, else creates new
+    if(which==="my") doImportMy();
+    else doImportEnemy(false);
+  }
+  document.querySelectorAll("[data-drop]").forEach(z=>{
+    const which=z.dataset.drop;
+    const inp=document.getElementById(which==="my"?"fileMy":"fileEnemy");
+    z.addEventListener("click",()=>inp&&inp.click());
+    z.addEventListener("dragover",ev=>{ev.preventDefault();z.classList.add("drag");});
+    z.addEventListener("dragleave",()=>z.classList.remove("drag"));
+    z.addEventListener("drop",ev=>{ev.preventDefault();z.classList.remove("drag");
+      const f=ev.dataTransfer.files[0]; if(f) readFile(f,txt=>depositCSV(which,txt));});
+  });
+  const fm=document.getElementById("fileMy");
+  if(fm) fm.addEventListener("change",e=>{const f=e.target.files[0];if(f)readFile(f,t=>depositCSV("my",t));});
+  const fe=document.getElementById("fileEnemy");
+  if(fe) fe.addEventListener("change",e=>{const f=e.target.files[0];if(f)readFile(f,t=>depositCSV("enemy",t));});
+  const fj=document.getElementById("fileJson");
+  if(fj) fj.addEventListener("change",e=>{const f=e.target.files[0];if(f)readFile(f,t=>restoreJson(t));});
+  const refSel=document.getElementById("refSel");
+  if(refSel) refSel.addEventListener("change",e=>mutate(()=>STATE.settings.refMode=e.target.value));
+  const qt=document.getElementById("quickType");
+  if(qt) qt.addEventListener("change",e=>{ quickType=e.target.value; });
+  const ms=document.getElementById("mySort");
+  if(ms) ms.addEventListener("change",ev=>{ mySort=ev.target.value; render(); });
+  const es=document.getElementById("enSort");
+  if(es) es.addEventListener("change",ev=>{ enSort=ev.target.value; render(); });
+  const ik=document.getElementById("intelKd");
+  if(ik) ik.addEventListener("change",ev=>{ intelKd=ev.target.value; render(); });
+  // drag enemy rows -> target dropzone
+  document.querySelectorAll('.lrow[draggable=true]').forEach(row=>{
+    row.addEventListener("dragstart",ev=>{ ev.dataTransfer.setData("text/plain", row.dataset.prov); row.classList.add("dragging"); });
+    row.addEventListener("dragend",()=>row.classList.remove("dragging"));
+  });
+  document.querySelectorAll('.dropzone[data-dz="targets"]').forEach(z=>{
+    z.addEventListener("dragover",ev=>{ev.preventDefault();z.classList.add("over");});
+    z.addEventListener("dragleave",()=>z.classList.remove("over"));
+    z.addEventListener("drop",ev=>{ ev.preventDefault();z.classList.remove("over");
+      const id=ev.dataTransfer.getData("text/plain");
+      mutate(()=>{ const e=curEnemy(); if(e&&id){ if(!e.targets)e.targets=[]; if(!e.targets.includes(id))e.targets.push(id); } });
+    });
+  });
+}
+
+document.getElementById("kdSelect").addEventListener("change",e=>{
+  mutate(()=>STATE.activeEnemy=e.target.value||null);
+});
+
+let pendingConfirm=null;
+function toast(msg){
+  let t=document.getElementById("toast");
+  if(!t){ t=document.createElement("div"); t.id="toast"; document.body.appendChild(t); }
+  t.textContent=msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("show"),2800);
+}
+function confirmDo(msg, fn, yesLabel){
+  pendingConfirm=fn;
+  openModal(`<div class="mh"><h3>Confirm</h3><button class="close" data-act="closemodal">×</button></div>
+    <div class="mb"><p class="note" style="line-height:1.55;font-size:13.5px">${esc(msg)}</p></div>
+    <div class="mf"><button class="btn ghost" data-act="closemodal">Cancel</button><button class="btn gold" data-act="confirmyes">${esc(yesLabel||"Yes, continue")}</button></div>`);
+}
+document.addEventListener("click",ev=>{
+  const t=ev.target.closest("[data-act]"); if(!t)return;
+  const act=t.dataset.act; if(!act)return;
+  const [cmd,arg]=act.split(":");
+  switch(cmd){
+    case "menu": document.body.classList.toggle("menu-open"); break;
+    case "selatk": if(selTgt){ selAtk=arg; quickAssign(selTgt); selAtk=null; } else { selAtk=(selAtk===arg?null:arg); render(); } break;
+    case "seltgt": selTgt=(selTgt===arg?null:arg); selAtk=null; render(); break;
+    case "staronly": starOnly=!starOnly; render(); break;
+    case "expprov": expProv=(expProv===arg?null:arg); render(); break;
+    case "target": mutate(()=>{ const e=curEnemy(); if(!e)return; if(!e.targets)e.targets=[];
+      const i=e.targets.indexOf(arg); if(i>=0)e.targets.splice(i,1); else e.targets.push(arg); }); break;
+    case "saveplan": save().then(()=>toast("Plan saved. You can close this and pick up where you left off.")); break;
+    case "savewave": { const e=curEnemy(); if(e&&e.wave.length){ e.savedWave=JSON.parse(JSON.stringify(e.wave)); e.savedTargets=JSON.parse(JSON.stringify(e.targets||[])); save(); render();
+        toast("Wave saved ("+e.wave.length+" attacks). Clear it and Restore anytime."); } } break;
+    case "restorewave": { const e=curEnemy(); if(e&&(e.savedWave||[]).length) confirmDo("Restore the saved wave? This replaces the current wave and targets.",()=>{ mutate(()=>{ e.wave=JSON.parse(JSON.stringify(e.savedWave)); e.targets=JSON.parse(JSON.stringify(e.savedTargets||[])); }); toast("Saved wave restored."); },"Restore"); } break;
+    case "clearwave": confirmDo("Clear all attacks AND your target list for this kingdom? Tip: use Save Wave first if you might want it back.",()=>{ mutate(()=>{ const e=curEnemy(); if(e){ e.wave=[]; e.targets=[]; } }); toast("Wave and targets cleared."); },"Clear wave"); break;
+    case "news": window.open(STATE.settings.newsUrl||"https://utopia-game.com/","_blank"); break;
+    case "pastenews": openPasteNews(); break;
+    case "pasteintel": openPasteIntel(); break;
+    case "parseintel": applyIntel(); break;
+    case "parsenews": parseNews(); break;
+    case "graphside": graphSide=arg; render(); break;
+    case "intelmode": intelMode=arg; render(); break;
+    case "savetoserver": saveToServer(); break;
+    case "loadfromserver": loadFromServer(); break;
+    case "nav": VIEW=arg; document.body.classList.remove("menu-open"); selAtk=null; selTgt=null; render(); break;
+    case "warmode": mutate(()=>{const e=curEnemy(); if(e) e.warMode=arg;}); break;
+    case "exportwave": exportWaveCSV(); break;
+    case "copywave": copyWaveText(); break;
+    case "switchkd": mutate(()=>{STATE.activeEnemy=arg;VIEW="wave";}); break;
+    case "togglefana": mutate(()=>{const p=mp(arg);p.fanaOn=!p.fanaOn;}); break;
+    case "togglemassfana": toggleMassFana(); break;
+    case "togglebl": mutate(()=>{const p=mp(arg);p.blOn=!p.blOn;}); break;
+    case "gen+": mutate(()=>{const p=mp(arg);p.generals=Math.min(MAX_GENERALS,num(p.generals)+1);}); break;
+    case "gen-": mutate(()=>{const p=mp(arg);p.generals=Math.max(1,num(p.generals)-1);}); break;
+    case "assign": openAssign(arg); break;
+    case "quickassign": quickAssign(arg); break;
+    case "delwave": mutate(()=>{const e=curEnemy();e.wave=e.wave.filter(w=>w.id!==arg);}); break;
+    case "movewave": mutate(()=>{const e=curEnemy();const w=e.wave.find(x=>x.id===arg); if(w&&w.cat!=="tm") w.cat=(w.cat==="mass"?"chain":"mass");}); break;
+    case "editenemy": openEnemyProv(arg); break;
+    case "intel-edit": { if(intelKd!=="mine"){ STATE.activeEnemy=intelKd; } openEnemyProv(arg); } break;
+    case "addprov": openProv(null); break;
+    case "editprov": openProv(arg); break;
+    case "delprov": confirmDo("Delete this province?",()=>{ mutate(()=>{STATE.myKd.provinces=STATE.myKd.provinces.filter(p=>p.id!==arg);}); toast("Province deleted."); },"Delete"); break;
+    case "addenemy": openKd(null); break;
+    case "editkd": openKd(arg); break;
+    case "delkd": confirmDo("Delete this kingdom and all its intel?",()=>{ mutate(()=>{delete STATE.enemies[arg]; if(STATE.activeEnemy===arg)STATE.activeEnemy=Object.keys(STATE.enemies)[0]||null;}); toast("Kingdom deleted."); },"Delete"); break;
+    case "editmymeta": openMyMeta(); break;
+    case "importmy": doImportMy(); break;
+    case "importenemy": doImportEnemy(false); break;
+    case "importenemymerge": doImportEnemy(true); break;
+    case "dltemplate": dlTemplate(arg); break;
+    case "exportjson": exportJson(); break;
+    case "importjsonpick": document.getElementById("fileJson").click(); break;
+    case "loadsample": toast("Sample data is disabled. Import your KD or paste intel."); break;
+    case "clearall": confirmDo("Erase ALL stored intel and waves? This cannot be undone.",()=>{ mutate(()=>{STATE=defaultState();VIEW="wave";}); toast("All data cleared."); },"Erase everything"); break;
+    case "savesettings": saveSettings(); break;
+    case "closemodal": pendingConfirm=null; closeModal(); break;
+    case "confirmyes": { const fn=pendingConfirm; pendingConfirm=null; closeModal(); if(fn) fn(); } break;
+    case "submitprov": submitProv(); break;
+    case "submitkd": submitKd(); break;
+    case "submitenemyprov": submitEnemyProv(); break;
+    case "submitmymeta": submitMyMeta(); break;
+    case "submitassign": submitAssign(); break;
+  }
+});
+function mp(id){ return STATE.myKd.provinces.find(p=>p.id===id); }
+
+/*══════════════ MODALS ══════════════*/
+function openModal(html){ document.getElementById("mbox").innerHTML=html;
+  document.getElementById("modal").classList.add("open"); }
+function closeModal(){ document.getElementById("modal").classList.remove("open"); }
+document.getElementById("modal").addEventListener("click",e=>{ if(e.target.id==="modal"){pendingConfirm=null;closeModal();} });
+function gv(id){ const el=document.getElementById(id); return el?el.value:""; }
+function gc(id){ const el=document.getElementById(id); return el?el.checked:false; }
+
+function openProv(id){
+  const p = id? mp(id) : {name:"",race:"",pers:"",land:"",nw:"",offense:"",defense:"",generals:STATE.settings.defGenerals,fana:false,bl:false};
+  openModal(`<div class="mh"><h3>${id?"Edit":"Add"} Province</h3><button class="close" data-act="closemodal">×</button></div>
+  <div class="mb">
+    <input type="hidden" id="p_id" value="${id||""}">
+    <div class="frow"><div class="fld"><label>Province name</label><input type="text" id="p_name" value="${esc(p.name)}"></div>
+      <div class="fld"><label>Generals home</label><input type="number" id="p_gen" value="${num(p.generals)}"></div></div>
+    <div class="frow"><div class="fld"><label>Race</label><select id="p_race">${["",...RACES].map(r=>`<option ${r===p.race?"selected":""}>${r}</option>`).join("")}</select></div>
+      <div class="fld"><label>Personality</label><select id="p_pers">${["",...PERS].map(r=>`<option ${r===p.pers?"selected":""}>${r}</option>`).join("")}</select></div></div>
+    <div class="frow f3"><div class="fld"><label>Land</label><input type="number" id="p_land" value="${num(p.land)||""}"></div>
+      <div class="fld"><label>Networth</label><input type="number" id="p_nw" value="${num(p.nw)||""}"></div>
+      <div class="fld"><label>Defense</label><input type="number" id="p_def" value="${num(p.defense)||""}"></div></div>
+    <div class="frow f1"><div class="fld"><label>Modified offense (sendable)</label><input type="number" id="p_off" value="${num(p.offense)||""}"></div></div>
+    <div class="flex" style="gap:24px;margin-top:6px">
+      <label class="flex" style="gap:8px;cursor:pointer"><input type="checkbox" id="p_fana" ${p.fana?"checked":""} style="width:auto"> <span style="color:var(--green2)">Can cast Fanaticism</span></label>
+      <label class="flex" style="gap:8px;cursor:pointer"><input type="checkbox" id="p_bl" ${p.bl?"checked":""} style="width:auto"> <span style="color:var(--red2)">Can cast Bloodlust</span></label>
+    </div>
+  </div>
+  <div class="mf"><button class="btn ghost" data-act="closemodal">Cancel</button><button class="btn gold" data-act="submitprov">Save</button></div>`);
+}
+function submitProv(){
+  const id=gv("p_id");
+  const data={name:gv("p_name")||"Unnamed",race:gv("p_race"),pers:gv("p_pers"),land:num(gv("p_land")),
+    nw:num(gv("p_nw")),offense:num(gv("p_off")),defense:num(gv("p_def")),generals:Math.max(1,Math.min(MAX_GENERALS,num(gv("p_gen"))||4)),
+    fana:gc("p_fana"),bl:gc("p_bl")};
+  mutate(()=>{ if(id){ Object.assign(mp(id),data); } else { STATE.myKd.provinces.push({id:uid(),fanaOn:false,blOn:false,...data}); } });
+  closeModal();
+}
+
+function openEnemyProv(id){
+  const e=curEnemy(); const p=e.provinces.find(x=>x.id===id);
+  openModal(`<div class="mh"><h3>Edit Enemy Intel — ${esc(p.name)}</h3><button class="close" data-act="closemodal">×</button></div>
+  <div class="mb">
+    <input type="hidden" id="e_id" value="${id}">
+    <div class="frow f3"><div class="fld"><label>Province</label><input type="text" id="e_name" value="${esc(p.name)}"></div>
+      <div class="fld"><label>Race</label><select id="e_race">${["",...RACES].map(r=>`<option ${r===p.race?"selected":""}>${r}</option>`).join("")}</select></div>
+      <div class="fld"><label>Personality</label><select id="e_pers">${["",...PERS].map(r=>`<option ${r===p.pers?"selected":""}>${r}</option>`).join("")}</select></div></div>
+    <div class="frow f3"><div class="fld"><label>Land</label><input type="number" id="e_land" value="${num(p.land)||""}"></div>
+      <div class="fld"><label>Networth</label><input type="number" id="e_nw" value="${num(p.nw)||""}"></div>
+      <div class="fld"><label>Honor</label><input type="number" id="e_honor" value="${num(p.honor)||""}"></div></div>
+    <div class="frow"><div class="fld"><label>Defense (mod)</label><input type="number" id="e_def" value="${num(p.defense)||""}"></div>
+      <div class="fld"><label>Offense</label><input type="number" id="e_off" value="${num(p.offense)||""}"></div></div>
+    <div class="frow f3"><div class="fld"><label>TPA</label><input type="number" step="0.01" id="e_tpa" value="${p.tpa!=null&&p.tpa!==""?p.tpa:""}"></div>
+      <div class="fld"><label>mTPA</label><input type="number" step="0.01" id="e_mdtpa" value="${p.mdtpa!=null&&p.mdtpa!==""?p.mdtpa:""}"></div>
+      <div class="fld"><label>WPA</label><input type="number" step="0.01" id="e_wpa" value="${p.wpa!=null&&p.wpa!==""?p.wpa:""}"></div></div>
+    <div class="frow f3"><div class="fld"><label>mWPA</label><input type="number" step="0.01" id="e_mdwpa" value="${p.mdwpa!=null&&p.mdwpa!==""?p.mdwpa:""}"></div>
+      <div class="fld"><label>Population</label><input type="number" id="e_pop" value="${num(p.pop)||""}" placeholder="overpop calc"></div>
+      <div class="fld"><label>Max pop</label><input type="number" id="e_maxpop" value="${num(p.maxpop)||""}" placeholder="blank = est"></div></div>
+    <div style="border-top:1px solid var(--line);margin:8px 0 14px"></div>
+    <label class="flex" style="gap:8px;cursor:pointer;margin-bottom:12px"><input type="checkbox" id="e_out" ${p.armyOut?"checked":""} style="width:auto"> <span style="color:var(--red2)">Army is OUT (attacking / chained)</span></label>
+    <div class="frow f3"><div class="fld"><label>Returns at tick</label><input type="number" id="e_rt" value="${num(p.returnTick)||""}"></div>
+      <div class="fld"><label>Incoming land (ac)</label><input type="number" id="e_inc" value="${num(p.incomingLand)||""}"></div>
+      <div class="fld"><label>Generals used</label><input type="number" id="e_gu" value="${num(p.generalsUsed)||""}"></div></div>
+  </div>
+  <div class="mf"><button class="btn ghost" data-act="closemodal">Cancel</button><button class="btn gold" data-act="submitenemyprov">Save intel</button></div>`);
+}
+function submitEnemyProv(){
+  const id=gv("e_id"), e=curEnemy(), p=e.provinces.find(x=>x.id===id);
+  mutate(()=>{ Object.assign(p,{name:gv("e_name"),race:gv("e_race"),pers:gv("e_pers"),land:num(gv("e_land")),nw:num(gv("e_nw")),
+    honor:num(gv("e_honor")),defense:num(gv("e_def")),offense:num(gv("e_off")),
+    tpa:gv("e_tpa")===""?"":num(gv("e_tpa")), wpa:gv("e_wpa")===""?"":num(gv("e_wpa")),
+    mdtpa:gv("e_mdtpa")===""?"":num(gv("e_mdtpa")), mdwpa:gv("e_mdwpa")===""?"":num(gv("e_mdwpa")),
+    pop:num(gv("e_pop")), maxpop:num(gv("e_maxpop")),
+    armyOut:gc("e_out"),returnTick:num(gv("e_rt")),incomingLand:num(gv("e_inc")),generalsUsed:num(gv("e_gu"))}); });
+  closeModal();
+}
+
+function openKd(id){
+  const e = id? STATE.enemies[id] : {name:"",loc:"",status:"available",warStart:"",eowcfExit:"",note:""};
+  openModal(`<div class="mh"><h3>${id?"Edit":"Add"} Enemy Kingdom</h3><button class="close" data-act="closemodal">×</button></div>
+  <div class="mb">
+    <input type="hidden" id="k_id" value="${id||""}">
+    <div class="frow"><div class="fld"><label>KD name</label><input type="text" id="k_name" value="${esc(e.name)}"></div>
+      <div class="fld"><label>Location</label><input type="text" id="k_loc" value="${esc(e.loc)}"></div></div>
+    <div class="frow"><div class="fld"><label>Status</label><select id="k_status">
+      ${[["available","Target (available)"],["hostile","Hostile"],["war","At War"],["eowcf","EoWCF (post-war)"],["done","Done / finished"]].map(([v,l])=>`<option value="${v}" ${e.status===v?"selected":""}>${l}</option>`).join("")}
+      </select></div>
+      <div class="fld"><label>EoWCF exit (date/time)</label><input type="datetime-local" id="k_exit" value="${e.eowcfExit||""}"></div></div>
+    <div class="fld"><label>Notes</label><input type="text" id="k_note" value="${esc(e.note||"")}" placeholder="war doctrines, chains, target order…"></div>
+  </div>
+  <div class="mf"><button class="btn ghost" data-act="closemodal">Cancel</button><button class="btn gold" data-act="submitkd">Save</button></div>`);
+}
+function submitKd(){
+  const id=gv("k_id");
+  const data={name:gv("k_name")||"Enemy KD",loc:gv("k_loc"),status:gv("k_status"),eowcfExit:gv("k_exit"),note:gv("k_note")};
+  mutate(()=>{ if(id){ Object.assign(STATE.enemies[id],data); }
+    else { const nid=uid(); STATE.enemies[nid]={id:nid,wave:[],provinces:[],warMode:(data.status==="war"?"in":"out"),...data}; STATE.activeEnemy=nid; } });
+  closeModal();
+}
+
+function openMyMeta(){
+  openModal(`<div class="mh"><h3>Edit My Kingdom</h3><button class="close" data-act="closemodal">×</button></div>
+  <div class="mb"><div class="frow"><div class="fld"><label>Kingdom name</label><input type="text" id="my_name" value="${esc(STATE.myKd.name)}"></div>
+    <div class="fld"><label>Location</label><input type="text" id="my_loc" value="${esc(STATE.myKd.loc||"")}"></div></div></div>
+  <div class="mf"><button class="btn ghost" data-act="closemodal">Cancel</button><button class="btn gold" data-act="submitmymeta">Save</button></div>`);
+}
+function submitMyMeta(){ mutate(()=>{STATE.myKd.name=gv("my_name")||"My Kingdom";STATE.myKd.loc=gv("my_loc");}); closeModal(); }
+
+/*──── ASSIGN ATTACK MODAL ────*/
+function quickAssign(targetId){
+  const e=curEnemy(); if(!e) return;
+  if(!selAtk){ openAssign(targetId); return; }   // no attacker chosen → full dialog
+  const atk=mp(selAtk); if(!atk){ openAssign(targetId); return; }
+  const tgt=e.provinces.find(p=>p.id===targetId); if(!tgt) return;
+  const lo=Math.max(0,leftoverOff(atk)), lg=leftoverGen(atk);
+  if(lo<=0){ toast(atk.name+" has no offense left — pick another province."); return; }
+  if(lg<=0){ toast(atk.name+" has no generals left — pick another province."); return; }
+  const gens=1;                                  // default: 1 general → most hits per province
+  const need=Math.ceil(num(tgt.defense)*1.01);   // default: just 1% over their defense
+  const off=Math.min(need, lo);                  // never send more than we have
+  const existing=e.wave.filter(w=>w.target===targetId && w.cat!=="tm").length;
+  // category follows the attack type: Massacre → Mass wave, others → Chain (your KD's structure)
+  const cat = quickType==="massacre" ? "mass" : "chain";
+  mutate(()=>{ e.wave.push({id:uid(),cat,target:targetId,attacker:selAtk,type:quickType||"march",off,gens}); });
+  if(off<need) toast(atk.name+" only has "+fmtK(lo)+" left — short of the break ("+fmtK(need)+").");
+}
+function openAssign(targetId){
+  const e=curEnemy(), tgt=e.provinces.find(p=>p.id===targetId);
+  const avail=STATE.myKd.provinces.filter(p=>leftoverGen(p)>0 && leftoverOff(p)>0);
+  // Plague priority: Undead provinces (with offense left) listed first so they get used to spread plague
+  const isUD=p=>(p.race||"").toLowerCase()==="undead";
+  const hasArmy=p=>Math.max(0,leftoverOff(p))>0 && leftoverGen(p)>0;
+  const pickList = STATE.myKd.provinces.slice().sort((a,b)=>{
+    const ta=isTM(a), tb=isTM(b);
+    if(ta!==tb) return ta?1:-1;        // TMs (no offense) sink to the bottom
+    const ua=isUD(a)&&hasArmy(a), ub=isUD(b)&&hasArmy(b);
+    if(ua!==ub) return ua?-1:1;        // available Undead first (plague)
+    return hasArmy(b)-hasArmy(a);      // then other available before exhausted
+  });
+  const firstUD = pickList.find(p=>isUD(p)&&hasArmy(p));
+  const defaultAtk = selAtk || (firstUD?firstUD.id:null);   // default to a plague-capable Undead
+  openModal(`<div class="mh"><h3>Assign Attack → ${esc(tgt.name)}</h3><button class="close" data-act="closemodal">×</button></div>
+  <div class="mb">
+    <input type="hidden" id="a_target" value="${targetId}">
+    <div class="apv-row" style="border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:10px">
+      <span><b class="def" style="font-size:15px">DEF ${fmt(tgt.defense)}</b></span>
+      <span class="k">NW ${fmt(tgt.nw)} · ${tgt.land?fmt(tgt.land)+" ac":""} · TPA ${tgt.tpa?fmt1(tgt.tpa):"?"} · WPA ${tgt.wpa?fmt1(tgt.wpa):"?"}</span>
+    </div>
+    <div class="frow f1" style="margin-bottom:10px">
+      <div class="fld"><label>Wave category</label>
+        <div class="seg" id="a_cat">
+          <button data-cat="mass" class="on">Mass</button>
+          <button data-cat="chain">Chain</button>
+          <button data-cat="tm">TM / Op</button>
+        </div>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fld"><label>Attacker province</label><select id="a_attacker">
+        ${pickList.map(p=>{const lo=Math.max(0,leftoverOff(p)),lg=leftoverGen(p);const dis=lo<=0||lg<=0;
+          return `<option value="${p.id}" ${dis?"disabled":""} ${p.id===defaultAtk&&!dis?"selected":""}>${isUD(p)?"🦠 ":""}${esc(p.name)} — ${fmt(lo)} off / ${lg} gen${dis?" (exhausted)":""}</option>`;}).join("")}
+      </select></div>
+      <div class="fld" id="a_typewrap"><label>Attack type</label><select id="a_type">
+        ${ATTACK_TYPES.map(a=>`<option value="${a.k}">${a.n}</option>`).join("")}
+      </select></div>
+    </div>
+    <div class="frow" id="a_tmwrap" style="display:none">
+      <div class="fld" style="grid-column:1/-1"><label>Operations — check all you want queued (optional floor, e.g. "2000 peas")</label>
+        <div class="opgrid"><div class="opgrp">🔮 Spells</div>
+          ${TM_SPELLS.map((o,i)=>`<label class="oprow"><input type="checkbox" class="opchk" value="${o}"> <span>${o}</span><input type="text" class="opfloor" data-op="${o}" placeholder="floor"></label>`).join("")}
+          <div class="opgrp">🗡 Thievery</div>
+          ${TM_THIEF.map((o,i)=>`<label class="oprow"><input type="checkbox" class="opchk" value="${o}"> <span>${o}</span><input type="text" class="opfloor" data-op="${o}" placeholder="floor"></label>`).join("")}
+        </div></div>
+      <div class="fld"></div>
+    </div>
+    <div class="frow" id="a_numwrap">
+      <div class="fld"><label>Offense to send</label><input type="number" id="a_off" value="${Math.ceil(num(tgt.defense)*1.01)}"></div>
+      <div class="fld"><label>Generals to send</label><input type="number" id="a_gens" min="1" max="5" value="1"></div>
+    </div>
+    <div class="apv" id="a_preview"></div>
+  </div>
+  <div class="mf"><button class="btn ghost" data-act="closemodal">Cancel</button><button class="btn gold" data-act="submitassign">Add to wave</button></div>`);
+
+  // local listeners
+  const cat=document.getElementById("a_cat");
+  const CAT_TYPE={mass:"massacre", chain:"march"};          // your wave structure: Mass=massacres, Chain=trad marches
+  const TYPE_CAT={massacre:"mass", march:"chain"};
+  const setCat=(key)=>{ cat.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.cat===key)); };
+  cat.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+    setCat(b.dataset.cat);
+    const tm=b.dataset.cat==="tm";
+    document.getElementById("a_tmwrap").style.display=tm?"grid":"none";
+    document.getElementById("a_typewrap").style.display=tm?"none":"block";
+    document.getElementById("a_numwrap").style.display=tm?"none":"grid";
+    if(!tm && CAT_TYPE[b.dataset.cat]) document.getElementById("a_type").value=CAT_TYPE[b.dataset.cat];  // category picks the right attack type
+    updateAssignPreview();
+  }));
+  const typeSel=document.getElementById("a_type");
+  if(typeSel) typeSel.addEventListener("change",()=>{           // attack type moves the category to match
+    const c=TYPE_CAT[typeSel.value]; if(c) setCat(c);
+    updateAssignPreview();
+  });
+  // opening default: category Mass → type Massacre
+  if(curCat()==="mass" && typeSel) typeSel.value=CAT_TYPE.mass;
+  ["a_attacker","a_type","a_off","a_gens","a_op"].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.addEventListener("input",updateAssignPreview);
+  });
+  // default offense = 1% over the target's defense (capped at the chosen attacker's leftover)
+  const sel=document.getElementById("a_attacker");
+  const need=Math.ceil(num(tgt.defense)*1.01);
+  const setOff=()=>{ const p=mp(sel.value); const lo=p?Math.max(0,leftoverOff(p)):need;
+    document.getElementById("a_off").value = lo>0 ? Math.min(need,lo) : need; };
+  setOff();
+  sel.addEventListener("change",()=>{ setOff(); updateAssignPreview(); });
+  updateAssignPreview();
+}
+function curCat(){ const b=document.querySelector("#a_cat button.on"); return b?b.dataset.cat:"mass"; }
+function updateAssignPreview(){
+  const e=curEnemy(); const tgt=e.provinces.find(p=>p.id===gv("a_target"));
+  const cat=curCat(), pv=document.getElementById("a_preview");
+  const atk=mp(gv("a_attacker"));
+  if(cat==="tm"){
+    const opsChecked=[...document.querySelectorAll(".opchk:checked")].map(c=>c.value);
+    pv.innerHTML=`<div class="apv-row"><span class="k">Operations (${opsChecked.length})</span><span style="text-align:right;max-width:60%">${opsChecked.length?opsChecked.map(esc).join(", "):"— check ops above"}</span></div>
+      <div class="apv-row"><span class="k">Your op caster</span><span>${atk?esc(atk.name):"—"}</span></div>
+      <div class="apv-row"><span class="k">Enemy TPA / WPA</span><span>${tgt.tpa?fmt1(tgt.tpa):"?"} / ${tgt.wpa?fmt1(tgt.wpa):"?"}</span></div>
+      <div class="apv-verdict v-na">TM — no offense / generals used</div>`;
+    return;
+  }
+  const off=num(gv("a_off")), gens=num(gv("a_gens")), def=num(tgt.defense), type=gv("a_type");
+  const genB=1+0.05*Math.max(0,gens-1);              // +5% per general over 1
+  const modOff=Math.round(off*genB);
+  const need=type==="conquest"?Math.ceil(def*0.51):def;  // conquest wins at 51% def
+  const breaks = modOff>need;
+  const margin = modOff-need;
+  const acres = (atk && breaks)? estLandGain(atk,tgt,e,type) : 0;
+  const removed = (atk && breaks)? estLandRemoved(atk,tgt,e,type) : 0;
+  const loss = estOffLoss(atk,off,type);
+  const aNW=atk?num(atk.nw):refNW(); const ratio=aNW?num(tgt.nw)/aNW:0; const pct=ratio*100;
+  // projected overpop including this prospective hit
+  let opLine="";
+  const pop=num(tgt.pop);
+  if(pop){
+    const maxNow=maxPopOf(tgt);
+    const already=landRemovedFromTarget(tgt.id);
+    const newLand=Math.max(1,num(tgt.land)-already-removed);
+    const newMax=Math.round(maxNow*(newLand/Math.max(1,num(tgt.land))));
+    const ol=overpopLevel(pop,newMax);
+    opLine=`<div class="apv-row"><span class="k">Target overpop (after)</span><span>${opChip(ol)}</span></div>`;
+  } else {
+    opLine=`<div class="apv-row"><span class="k">Target overpop</span><span class="dim" style="font-size:11px">add enemy population for calc</span></div>`;
+  }
+  pv.innerHTML=`
+    <div class="apv-row"><span class="k">Offense sent</span><span>${fmt(off)}${gens>1?` <span class="dim">×${genB.toFixed(2)} (${gens} gens) = ${fmt(modOff)}</span>`:""}</span></div>
+    <div class="apv-row"><span class="k">${type==="conquest"?"Need (51% def)":"Defense"}</span><span>${fmt(need)} <span class="dim">def ${fmt(def)}</span></span></div>
+    <div class="apv-row"><span class="k">Margin</span><span style="color:${breaks?'var(--green2)':'var(--red2)'}">${margin>=0?"+":""}${fmt(margin)}</span></div>
+    <div class="apv-row"><span class="k">RNW (target / you)</span><span><span class="pill ${inRange(pct)?"in":"out"}" style="min-width:auto">${aNW?pctTxt(pct):"—"}</span> <span class="dim">×${(ratio||0).toFixed(2)} → gain f ${(gainFactor(atk,tgt,e)).toFixed(2)}</span></span></div>
+    ${(TYPE_LAND[type]||type==="ambush")?`<div class="apv-row"><span class="k">${type==="raze"?"Land razed":type==="ambush"?"Land recovered (50% of their incoming "+fmt(num(tgt.incomingLand))+"A)":"Est. land gain"}</span><span style="color:${type==="raze"?'var(--red2)':'var(--green2)'}">${type==="raze"?"−"+fmt(removed):"+"+fmt(acres)} ac</span></div>`:""}
+    <div class="apv-row"><span class="k">Est. your off losses</span><span style="color:var(--red2)">−${fmt(loss)}</span></div>
+    <div class="apv-row"><span class="k">Attack time (${e.warMode==="in"?"war":"normal"})</span><span>${atk?estAttackTime(atk,tgt,e,type)+" ticks":"—"}</span></div>
+    ${opLine}
+    <div class="apv-verdict ${breaks?'v-break':'v-fail'}">${breaks?"✓ BREAKS DEFENSE":"✗ SHORT BY "+fmt(Math.abs(margin))}</div>`;
+}
+function submitAssign(){
+  const e=curEnemy(), targetId=gv("a_target"), cat=curCat(), attacker=gv("a_attacker");
+  if(!attacker){ toast("No attacker available — all provinces are exhausted."); return; }
+  const tgt=e.provinces.find(p=>p.id===targetId);
+  const atk=mp(attacker);
+  let entry={id:uid(),cat,target:targetId,attacker};
+  if(cat==="tm"){
+    const checked=[...document.querySelectorAll(".opchk:checked")].map(c=>c.value);
+    if(!checked.length){ toast("Check at least one spell or op."); return; }
+    mutate(()=>{ checked.forEach(opName=>{
+      const fl=document.querySelector('.opfloor[data-op="'+opName.replace(/"/g,'\\"')+'"]');
+      const floor=fl&&fl.value.trim()?fl.value.trim():"";
+      e.wave.push({id:uid(),cat:"tm",target:targetId,attacker,type:"op",op:opName,floor,off:0,gens:0});
+    }); });
+    closeModal(); toast(checked.length+" op"+(checked.length>1?"s":"")+" queued."); return;
+  }
+  else {
+    let gens=num(gv("a_gens"));
+    const avail=atk?leftoverGen(atk):gens;          // generals this prov still has free
+    if(gens>avail){ gens=Math.max(1,avail);
+      if(avail<=0){ toast((atk?atk.name:"That province")+" has no generals left to send."); return; }
+      toast("Only "+avail+" general"+(avail===1?"":"s")+" left on "+(atk?atk.name:"that province")+" — using "+gens+".");
+    }
+    gens=Math.max(1,Math.min(gens,MAX_GENERALS));
+    entry.off=num(gv("a_off")); entry.gens=gens; entry.type=gv("a_type");
+  }
+  mutate(()=>{ e.wave.push(entry); });
+  closeModal();
+}
+
+/*══════════════ CSV PARSING ══════════════*/
+function parseCSV(text){
+  const rows=[]; let i=0,field="",row=[],q=false;
+  text=text.replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+  while(i<text.length){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){field+='"';i++;} else q=false; } else field+=c; }
+    else { if(c==='"')q=true; else if(c===","){row.push(field);field="";} 
+      else if(c==="\n"){row.push(field);rows.push(row);row=[];field="";} 
+      else if(c==="\t"){row.push(field);field="";} else field+=c; }
+    i++;
+  }
+  if(field.length||row.length){row.push(field);rows.push(row);}
+  return rows.filter(r=>r.some(x=>x.trim()!==""));
+}
+const ALIAS={
+  kdloc:["kd","kdnum","kingdom","kdloc","loc","coords","kingdomnum","kdhash"],
+  combo:["combo"], nwpa:["nwpa"], poppct:["poppct"],
+  offhome:["offhome"], defhome:["defhome"], somdef:["somdef"],
+  ome:["ome"], dme:["dme"], army:["army"], allarmies:["allarmies"],
+  otpa:["otpa"], dtpa:["dtpa"], owpa:["owpa"], dwpa:["dwpa"], ruler:["ruler"],
+  name:["province","prov","name","provincename","ruler","provname","target","slot"],
+  race:["race"],
+  pers:["personality","pers","persona","class"],
+  land:["land","acres","acre","size","acreage","totalland"],
+  nw:["networth","nw","worth","netw","networthgc","netvalue"],
+  offense:["offense","off","modoffense","moff","mo","oma","sendable","attack","offence","rawoff","rawoffense","practicaloffense","offhome","modoff"],
+  defense:["defense","def","moddefense","mdef","md","dme","defence","modifieddefense","rawdef","rawdefense","practicaldefense","defhome","defathome","moddef","homedefense"],
+  generals:["generals","gens","general","gen","generalshome"],
+  fana:["fana","fanaticism","canfana","fanatic"],
+  bl:["bl","bloodlust","canbl","blood"],
+  tpa:["tpa","thievesperacre","thieves","thief","thievesacre","tparaw","rawtpa","rtpa"],
+  wpa:["wpa","wizardsperacre","wizards","wizard","mages","mageperacre","wizardsacre","wparaw","rawwpa","rwpa"],
+  armyout:["armyout","out","attacked","away","armaway","armyaway","armout","isout"],
+  returntick:["returntick","return","returns","rt","returnticks","returntime"],
+  incomingland:["incomingland","incoming","landin","inc","incland","landincoming","returningland"],
+  generalsused:["generalsused","gensused","gensout","generalsout","gensaway","genused"],
+  pop:["pop","population","totalpop","peasants","peas"],
+  maxpop:["maxpop","maxpopulation","livingspace","maxpeasants","popmax","ls"],
+  honor:["honor","honour","hon"],
+  mdtpa:["mdtpa","mtpa","modtpa","modifiedtpa","tpamod","dtpa"],
+  mdwpa:["mdwpa","mwpa","modwpa","modifiedwpa","wpamod","dwpa"],
+  be:["be"], wages:["wages"], gcs:["gcs","gold","gc"], food:["food"], runes:["runes"],
+  goodspells:["goodspells"], badspells:["badspells"],
+  peons:["peons","peasantscount"], military:["military"], farm:["farm"], towe:["towe","tower","towers"],
+  bank:["bank"], mill:["mill"], homes:["home","homes"], guil:["guil","guild","guilds"], univ:["univ"], libs:["libs"], cast:["cast","castle","castles"], wts:["wts","wt","watchtower","watchtowers"],
+  alche:["alche","alchemy"],tools:["tools"],housi:["housi","housing"],produ:["produ","production"],
+  bookk:["bookk","bookkeeping"],artis:["artis","artisan"],strat:["strat","strategy"],siege:["siege"],
+  tacti:["tacti","tactics"],valor:["valor"],heroi:["heroi","heroism"],resil:["resil","resilience"],
+  crime:["crime"],chann:["chann","channeling"],shiel:["shiel","shielding"],cunni:["cunni","cunning"],
+  sorce:["sorce","sorcery"],fines:["fines","finesse"]
+};
+function normHead(h){ return h.toLowerCase().replace(/[^a-z0-9]/g,""); }
+function mapHeaders(headers){
+  const norm=headers.map(normHead); const map={};
+  for(const field in ALIAS){
+    for(const a of ALIAS[field]){ const idx=norm.indexOf(a); if(idx>=0){ map[field]=idx; break; } }
+  }
+  return map;
+}
+function parseBool(v){ if(v==null)return false; const s=String(v).trim().toLowerCase();
+  return ["yes","y","1","x","true","t","✓"].includes(s); }
+
+function rowsToObjects(text){
+  const rows=parseCSV(text); if(rows.length<2) return {map:{},objs:[]};
+  const map=mapHeaders(rows[0]);
+  const normHeaders=rows[0].map(h=>h.toLowerCase().replace(/[^a-z0-9]/g,""));
+  const objs=rows.slice(1).map(r=>{
+    const o={}; for(const f in map) o[f]=r[map[f]]!==undefined?r[map[f]].trim():"";
+    if(o.name) o.name=o.name.replace(/\s*\(\d{1,2}:\d{1,2}\)\s*$/,"").trim();
+    o.__raw=r; o.__headers=normHeaders;
+    return o;
+  }).filter(o=>o.name && !/^(total|average|avg|sum)$/i.test(o.name));
+  return {map,objs};
+}
+
+function doImportMy(){
+  const txt=gv("pasteMy").trim();
+  if(!txt){ toast("Paste or drop your kingdom CSV first."); return; }
+  const {objs}=rowsToObjects(txt);
+  if(!objs.length){ toast("Couldn't find any rows. Make sure the first line is a header with a 'province' column."); return; }
+  const provs=objs.map(o=>({id:uid(),name:o.name||"Unnamed",race:o.race||"",pers:o.pers||"",
+    land:num(o.land),nw:num(o.nw),offense:num(o.offense),defense:num(o.defense),
+    generals:Math.max(1,Math.min(MAX_GENERALS,(o.generals!==undefined&&o.generals!==""?num(o.generals):(STATE.settings.defGenerals+((o.pers||"").toLowerCase()==="general"?1:0))))),
+    fana:parseBool(o.fana),bl:parseBool(o.bl),fanaOn:false,blOn:false,sci:grabSci(o)}));
+  mutate(()=>{STATE.myKd.provinces=provs;VIEW="mykd";});
+  save(); toast(`Imported ${provs.length} provinces into ${STATE.myKd.name}.`);
+}
+const SCI_KEYS=["alche","tools","housi","produ","bookk","artis","strat","siege","tacti","valor","heroi","resil","crime","chann","shiel","cunni","sorce","fines"];
+function grabSci(o){ const s={}; let any=false; SCI_KEYS.forEach(k=>{ if(o[k]!==undefined&&o[k]!==""){ s[k]=num(o[k]); any=true; } });
+  ["be","wages","gcs","food","runes","goodspells","badspells","peons","military","farm","towe","bank","mill","homes","guil","univ","libs","cast","wts"].forEach(k=>{ if(o[k]!==undefined&&o[k]!==""){ s[k]=k==="goodspells"||k==="badspells"?o[k]:num(o[k]); any=true; } });
+  return any?s:null; }
+
+const COLMAP={
+  army:"army",allarmies:"allArmies",off:"off",def:"def",offhome:"offHome",defhome:"defHome",
+  somdef:"somDef",osoff:"osOff",dsdef:"dsDef",ome:"ome",dme:"dme",opa:"opa",dpa:"dpa",
+  os:"os",ds:"ds",leets:"leets",horses:"horses",solds:"solds",military:"military",
+  ostrain:"osTrain",dstrain:"dsTrain",elitetrain:"eliteTrain",prisoners:"prisoners",
+  thv:"thieves",wiz:"wizards",rtpa:"rtpa",otpa:"otpa",dtpa:"dtpa",rwpa:"rwpa",owpa:"owpa",dwpa:"dwpa",
+  thieftrain:"thiefTrain",be:"be",
+  home:"bHome",farm:"bFarm",mill:"bMill",bank:"bBank",tgs:"bTGs",arms:"bArms",rax:"bRax",
+  fort:"bFort",cast:"bCast",hosp:"bHosp",guil:"bGuil",towe:"bTowe",tds:"bTDs",wts:"bWTs",
+  univ:"bUniv",libs:"bLibs",stab:"bStab",dung:"bDung",barr:"bBarr",sur:"survAcres",
+  stocked:"stocked",allocated:"allocated",
+  alche:"sAlche",tools:"sTools",housi:"sHousi",produ:"sProdu",bookk:"sBookk",artis:"sArtis",
+  strat:"sStrat",siege:"sSiege",tacti:"sTacti",valor:"sValor",heroi:"sHeroi",resil:"sResil",
+  crime:"sCrime",chann:"sChann",shiel:"sShiel",cunni:"sCunni",sorce:"sSorce",fines:"sFines",
+  gcs:"gcs",gcpa:"gcpa",food:"food",runes:"runes",tb:"tb",peons:"peons",ppa:"ppa",nonpeon:"nonpeon",
+  sos:"sos",infil:"infil",som:"som",intelage:"intelAge",nwpa:"nwpa",poppct:"poppct",
+};
+function buildFullIntel(o){
+  const intel={};
+  if(o.__raw && o.__headers){
+    o.__headers.forEach((nh,i)=>{ if(COLMAP[nh]){ const v=o.__raw[i]; if(v!==undefined&&String(v).trim()!=="") intel[COLMAP[nh]]=num(v); } });
+    const mi=o.__headers.indexOf("map"); if(mi>=0&&o.__raw[mi]) intel.map=String(o.__raw[mi]).trim();
+  }
+  return intel;
+}
+function buildEnemyProvs(objs){
+  return objs.map(o=>({intel:buildFullIntel(o),id:uid(),name:o.name||"Unnamed",race:o.race||"",pers:o.pers||"",combo:o.combo||"",
+    land:num(o.land),nw:num(o.nw),honor:num(o.honor),
+    offense:num(o.offense)||num(o.offhome),defense:num(o.defense)||num(o.defhome),
+    offHome:num(o.offhome),defHome:num(o.defhome),somDef:num(o.somdef),
+    ome:num(o.ome),dme:num(o.dme),army:num(o.army),allArmies:num(o.allarmies),
+    tpa:o.tpa!==undefined&&o.tpa!==""?num(o.tpa):"",wpa:o.wpa!==undefined&&o.wpa!==""?num(o.wpa):"",
+    otpa:num(o.otpa),dtpa:num(o.dtpa),owpa:num(o.owpa),dwpa:num(o.dwpa),
+    mdtpa:o.dtpa!==undefined&&o.dtpa!==""?num(o.dtpa):(o.mdtpa!==undefined&&o.mdtpa!==""?num(o.mdtpa):""),
+    mdwpa:o.dwpa!==undefined&&o.dwpa!==""?num(o.dwpa):(o.mdwpa!==undefined&&o.mdwpa!==""?num(o.mdwpa):""),
+    poppct:num(o.poppct),be:num(o.be),
+    armyOut:num(o.army)>0||parseBool(o.armyout),returnTick:num(o.returntick),incomingLand:num(o.incomingland),
+    generalsUsed:num(o.generalsused),pop:num(o.pop),maxpop:num(o.maxpop),sci:grabSci(o)}));
+}
+function doImportEnemy(merge){
+  const txt=gv("pasteEnemy").trim();
+  if(!txt){ toast("Paste or drop enemy CSV first."); return; }
+  const {objs}=rowsToObjects(txt);
+  if(!objs.length){ toast("Couldn't find any rows. First line must be a header with a 'province' column."); return; }
+  const hasLoc=objs.some(o=>(o.kdloc||"").trim());
+  if(hasLoc && !merge){
+    const byKd={};
+    objs.forEach(o=>{ const loc=(o.kdloc||"").trim(); (byKd[loc||"_none"]=byKd[loc||"_none"]||[]).push(o); });
+    const homeLoc=(STATE.myKd&&STATE.myKd.loc||"").trim();
+    let provCount=0, lastId=null, homeCount=0;
+    mutate(()=>{
+      for(const key in byKd){
+        const realLoc=key==="_none"?"":key;
+        // HOME ROUTING: if this location is MY kingdom, put provinces in myKd (not enemies)
+        if(homeLoc && realLoc===homeLoc){
+          if(!STATE.myKd.provinces) STATE.myKd.provinces=[];
+          buildEnemyProvs(byKd[key]).forEach(np=>{ const ex=STATE.myKd.provinces.find(p=>(p.name||"").toLowerCase()===np.name.toLowerCase());
+            if(ex) Object.assign(ex,{...np,id:ex.id,generals:ex.generals,fana:ex.fana,bl:ex.bl,fanaOn:ex.fanaOn,blOn:ex.blOn}); else { np.generals=STATE.settings.defGenerals; np.fanaOn=false; np.blOn=false; STATE.myKd.provinces.push(np); }
+            homeCount++; });
+          STATE.myKd._rev=Date.now();
+          continue;
+        }
+        let kd=realLoc?Object.values(STATE.enemies).find(e=>(e.loc||"")===realLoc):null;
+        if(!kd){ const nid=uid(); kd={id:nid,name:"KD "+(realLoc||"?"),loc:realLoc,status:"available",warMode:"out",eowcfExit:"",note:"",wave:[],targets:[],provinces:[],_rev:Date.now()}; STATE.enemies[nid]=kd; }
+        buildEnemyProvs(byKd[key]).forEach(np=>{ const ex=kd.provinces.find(p=>(p.name||"").toLowerCase()===np.name.toLowerCase());
+          if(ex) Object.assign(ex,{...np,id:ex.id}); else kd.provinces.push(np); provCount++; });
+        kd._rev=Date.now(); lastId=kd.id;
+      }
+      if(lastId) STATE.activeEnemy=lastId; VIEW=homeCount&&!provCount?"mykd":"wave";
+    });
+    save(); toast("Imported "+provCount+" enemy + "+homeCount+" home provinces by location.");
+    return;
+  }
+  const provs=buildEnemyProvs(objs);
+  if(merge && curEnemy()){
+    const e=curEnemy();
+    mutate(()=>{ provs.forEach(np=>{ const ex=e.provinces.find(p=>p.name.toLowerCase()===np.name.toLowerCase());
+        if(ex){ Object.assign(ex,{...np,id:ex.id}); } else e.provinces.push(np); }); e._rev=Date.now(); VIEW="wave"; });
+    save(); toast("Merged "+provs.length+" provinces into "+e.name+".");
+  } else {
+    const name=gv("enmName").trim()||"Enemy KD "+(Object.keys(STATE.enemies).length+1);
+    const loc=gv("enmLoc").trim(); const nid=uid();
+    mutate(()=>{ STATE.enemies[nid]={id:nid,name,loc,status:"available",warMode:"out",eowcfExit:"",note:"",wave:[],targets:[],provinces:provs,_rev:Date.now()};
+      STATE.activeEnemy=nid; VIEW="wave"; });
+    save(); toast("Created \""+name+"\" with "+provs.length+" provinces.");
+  }
+}
+
+function readFile(file,cb){ const r=new FileReader(); r.onload=()=>cb(String(r.result)); r.readAsText(file); }
+function download(name,text,type){ const b=new Blob([text],{type:type||"text/plain"});
+  const u=URL.createObjectURL(b); const a=document.createElement("a"); a.href=u; a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(u),1000); }
+function dlTemplate(which){
+  if(which==="my"){
+    download("my_kingdom_template.csv",
+      "province,race,personality,land,networth,offense,defense,generals,fana,bloodlust\n"+
+      "Stormhold,Orc,Warrior,1450,985000,420000,310000,5,yes,yes\n"+
+      "Ironvale,Avian,Tactician,1180,742000,360000,210000,5,yes,no\n","text/csv");
+  } else {
+    download("enemy_kingdom_template.csv",
+      "province,race,personality,land,networth,honor,defense,offense,tpa,mtpa,wpa,mwpa,population,max_pop,army_out,return_tick,incoming_land,generals_used\n"+
+      "Blackmoor,Undead,Tactician,1320,910000,42000,295000,140000,1.8,2.1,2.4,2.8,31000,30360,no,,,\n"+
+      "Ravenfall,Faery,Mystic,1090,688000,33000,255000,95000,2.1,2.4,4.6,5.3,26800,23980,yes,118,260,3\n","text/csv");
+  }
+}
+function exportJson(){ download("warroom_backup_"+new Date().toISOString().slice(0,10)+".json",
+  JSON.stringify(STATE,null,2),"application/json"); }
+
+/* ── share the wave with the kingdom ── */
+function waveRowsFor(e,key){ return e.wave.filter(x=>x.cat===key).map(x=>({x,d:deriveAttack(e,x)})); }
+function exportWaveCSV(){
+  const e=curEnemy(); if(!e){toast("No enemy KD selected.");return;}
+  if(!e.wave.length){toast("No attacks in the wave yet.");return;}
+  const q=s=>{s=String(s==null?"":s); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+  const line=a=>a.map(q).join(",");
+  const L=[];
+  L.push(line(["WAR WAVE","vs "+e.name+" ("+(e.loc||"?")+")","Mode: "+(e.warMode==="in"?"IN WAR":"OUT OF WAR"),"Generated "+new Date().toLocaleString()]));
+  L.push("");
+  const hdr=["#","Attacker","Target","Attack Type","Offense","Gens","RNW %","Breaks?","Est Gain (ac)","Est Off Loss","Atk Time (t)","Overpop After"];
+  [["mass","MASS TARGETS"],["chain","CHAIN TARGETS"]].forEach(([key,name])=>{
+    const rows=waveRowsFor(e,key);
+    L.push(line(["=== "+name+" ("+rows.length+") ==="]));
+    L.push(line(hdr));
+    rows.forEach(({x,d},i)=>{
+      const at=ATTACK_TYPES.find(a=>a.k===x.type); const op=d.tgt?projectedOverpop(d.tgt):null;
+      L.push(line([i+1, d.atk?d.atk.name:"?", d.tgt?d.tgt.name:"?", at?at.n:x.type, fmt(x.off), x.gens,
+        Math.round(d.rnw), d.willBreak?"YES":"NO", d.willBreak?fmt(d.acres):0, fmt(d.loss), d.atime,
+        op?(op.after.label.replace(/·/g,"")+" "+Math.round(op.after.r*100)+"%"):"—"]));
+    });
+    const tg=rows.reduce((a,r)=>a+(r.d.willBreak?r.d.acres:0),0);
+    const tl=rows.reduce((a,r)=>a+r.d.loss,0);
+    const brk=rows.filter(r=>r.d.willBreak).length;
+    L.push(line(["","TOTAL","","","","","",brk+"/"+rows.length+" break",fmt(tg),fmt(tl),"",""]));
+    L.push("");
+  });
+  const tms=waveRowsFor(e,"tm");
+  L.push(line(["=== TM / OPS ("+tms.length+") ==="]));
+  L.push(line(["#","Caster","Target","Operation","Enemy TPA","Enemy WPA","Overpop"]));
+  tms.forEach(({x,d},i)=>{ const op=d.tgt?projectedOverpop(d.tgt):null;
+    L.push(line([i+1,d.atk?d.atk.name:"?",d.tgt?d.tgt.name:"?",x.op||"op",
+      d.tgt&&d.tgt.tpa!==""?d.tgt.tpa:"?", d.tgt&&d.tgt.wpa!==""?d.tgt.wpa:"?",
+      op?(op.now.label.replace(/·/g,"")+" "+Math.round(op.now.r*100)+"%"):"—"]));});
+  download("warwave_"+e.name.replace(/[^a-z0-9]+/gi,"_").toLowerCase()+".csv", L.join("\n"),"text/csv");
+}
+function copyWaveText(){
+  const e=curEnemy(); if(!e){toast("No enemy KD selected.");return;}
+  if(!e.wave.length){toast("No attacks in the wave yet.");return;}
+  const pad=(s,n)=>{s=String(s); return s.length>=n?s.slice(0,n):s+" ".repeat(n-s.length);};
+  const L=[];
+  L.push("WAR WAVE vs "+e.name+" ("+(e.loc||"?")+")  ["+(e.warMode==="in"?"IN WAR":"OUT OF WAR")+"]");
+  function sec(key,name){
+    const rows=waveRowsFor(e,key); if(!rows.length) return;
+    L.push(""); L.push("== "+name+" ("+rows.length+") ==");
+    rows.forEach(({x,d},i)=>{
+      const at=ATTACK_TYPES.find(a=>a.k===x.type);
+      L.push(pad((i+1)+".",3)+pad(d.atk?d.atk.name:"?",12)+"-> "+pad(d.tgt?d.tgt.name:"?",12)+" "+
+        pad(at?at.n:x.type,15)+pad(fmt(x.off)+"/"+fmt(d.def),16)+(d.willBreak?"BREAK +"+fmt(d.acres)+"ac":"SHORT"));
+    });
+  }
+  sec("mass","MASS"); sec("chain","CHAIN");
+  const tms=waveRowsFor(e,"tm");
+  if(tms.length){ L.push(""); L.push("== TM/OPS ("+tms.length+") ==");
+    tms.forEach(({x,d},i)=>L.push(pad((i+1)+".",3)+pad(d.atk?d.atk.name:"?",12)+"-> "+pad(d.tgt?d.tgt.name:"?",12)+" "+(x.op||"op")));}
+  const text="```\n"+L.join("\n")+"\n```";
+  const done=()=>toast("Wave copied — paste it into Discord or your forum.");
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(()=>showCopyFallback(text));
+  } else showCopyFallback(text);
+}
+function showCopyFallback(text){
+  openModal(`<div class="mh"><h3>Copy Wave for KD</h3><button class="close" data-act="closemodal">×</button></div>
+    <div class="mb"><p class="note mb12" style="margin-bottom:10px">Select all & copy, then paste to your KD.</p>
+    <textarea style="min-height:320px">${esc(text)}</textarea></div>
+    <div class="mf"><button class="btn gold" data-act="closemodal">Done</button></div>`);
+}
+
+/*══════════════ PASTE INTEL (SoT / SoM / SoS / Survey / Infiltrate) ══════════════*/
+
+/*══════════════ LIVE SYNC (game → intel server → here) ══════════════*/
+let syncCursor=0, syncOn=false;
+function applyParsedIntel(r){
+  const e=curEnemy(); if(!e||!r||!r.kind||!r.name) return false;
+  let p=e.provinces.find(x=>x.name.toLowerCase()===r.name.toLowerCase());
+  let created=false;
+  if(!p){ p={id:uid(),name:r.name,race:"",pers:"",land:0,nw:0,honor:0,defense:0,offense:0,tpa:"",wpa:"",mdtpa:"",mdwpa:"",armyOut:false,returnTick:0,incomingLand:0,generalsUsed:0,pop:0,maxpop:0}; e.provinces.push(p); created=true; }
+  const f=r.fields;
+  const setIf=(k,v)=>{ if(v!=null && v!=="" && !(typeof v==="number"&&isNaN(v))) p[k]=v; };
+  setIf("race",f.race); setIf("pers",f.pers); setIf("land",f.land); setIf("nw",f.nw);
+  setIf("honor",f.honor); setIf("pop",f.pop); setIf("maxpop",f.maxpop);
+  setIf("offense",f.offense); setIf("defense",f.defense);
+  if(f.tpa!=null){ p.mdtpa=f.tpa; if(!num(p.tpa)) p.tpa=f.tpa; }
+  if(f.wpa!=null){ p.mdwpa=f.wpa; if(!num(p.wpa)) p.wpa=f.wpa; }
+  if(f.armyOut!=null) p.armyOut=f.armyOut;
+  if(f.returnTicks!=null){ p.armyOut=true; p.returnTick=STATE.tick+Math.ceil(f.returnTicks); }
+  if(f.generalsUsed!=null) p.generalsUsed=f.generalsUsed;
+  return true;
+}
+function routeFeedEntry(en){
+  const txt=en.data_simple||""; if(!txt.trim()) return false;
+  const u=(en.url||"").toLowerCase();
+  const homeLoc=(STATE.myKd&&STATE.myKd.loc)||"";
+
+  // 1) NEWS pages
+  if(u.includes("news")){ return parseNewsText(txt)>0; }
+
+  // 2) KINGDOM SUMMARY pages (kingdom_details) -> create/update KD SHELL only, NEVER a province
+  if(u.includes("kingdom_details")){
+    let loc=null;
+    const mu=u.match(/kingdom_details\/(\d{1,3})\/(\d{1,3})/);
+    if(mu) loc=mu[1]+":"+mu[2];
+    if(!loc){ const mt=txt.match(/\((\d{1,3}):(\d{1,3})\)/); if(mt) loc=mt[1]+":"+mt[2]; }
+    if(!loc) return false;
+    let nm=null;
+    const mn=txt.match(/kingdom\s+of\s+([^()\n|]+?)\s*\(\d+:\d+\)/i);
+    if(mn) nm=mn[1].trim(); if(!nm) nm="KD "+loc;
+    // your own kingdom: update My Kingdom name + load its provinces, do not add an enemy
+    if(homeLoc && loc===homeLoc){
+      if(STATE.myKd){ STATE.myKd.name=nm; STATE.myKd.loc=loc; parseKingdomProvinces(txt, STATE.myKd); STATE.myKd._rev=Date.now(); }
+      return true;
+    }
+    STATE.enemies=STATE.enemies||{};
+    let e=Object.values(STATE.enemies).find(x=>(x.loc||"")===loc);
+    if(!e){
+      const nid=uid();
+      e={id:nid,name:nm,loc:loc,status:"available",warMode:"out",eowcfExit:"",note:"",wave:[],targets:[],provinces:[],_rev:Date.now()};
+      STATE.enemies[nid]=e;
+      if(!STATE.activeEnemy) STATE.activeEnemy=nid;
+    } else { e.name=nm; e._rev=Date.now(); }
+    // try to auto-load province rows listed on the kingdom page (basic info only)
+    parseKingdomProvinces(txt, e);
+    return true;
+  }
+
+  // 3) INDIVIDUAL PROVINCE INTEL (SoT/SoM/SoS/Survey/Infiltrate) -> real province
+  const r=parseIntelText(txt);
+  if(!r||!r.kind||!r.name) return false;
+  // find the province location from the page so we file it under the right KD
+  let provLoc=null;
+  const ml=txt.match(/\((\d{1,3}):(\d{1,3})\)/);
+  if(ml) provLoc=ml[1]+":"+ml[2];
+  // own kingdom province?
+  if(homeLoc && provLoc===homeLoc){
+    return applyProvinceTo(STATE.myKd, r);
+  }
+  // enemy: match KD by the province's location, else active enemy
+  let kd=null;
+  if(provLoc){ kd=Object.values(STATE.enemies||{}).find(x=>(x.loc||"")===provLoc); }
+  if(!kd) kd=curEnemy();
+  if(!kd) return false;
+  return applyProvinceTo(kd, r);
+}
+
+// write a parsed province (r) into a KD's province list; only real intel creates a province
+function cleanProvName(n){ return ((n||"")+"").replace(/[~¬`*]+/g,"").replace(/\s*\(\d{1,2}:\d{1,2}\)\s*$/,"").trim(); }
+function applyProvinceTo(kd, r){
+  if(!kd||!r||!r.name) return false;
+  if(!Array.isArray(kd.provinces)) kd.provinces=[];
+  r.name=cleanProvName(r.name); let p=kd.provinces.find(x=>cleanProvName(x.name).toLowerCase()===r.name.toLowerCase());
+  let created=false;
+  if(!p){ p={id:uid(),name:r.name,race:"",pers:"",land:0,nw:0,honor:0,defense:0,offense:0,tpa:"",wpa:"",mdtpa:"",mdwpa:"",armyOut:false,returnTick:0,incomingLand:0,generalsUsed:0,pop:0,maxpop:0}; kd.provinces.push(p); created=true; }
+  const f=r.fields;
+  const setIf=(k,v)=>{ if(v!=null && v!=="" && !(typeof v==="number"&&isNaN(v))) p[k]=v; };
+  setIf("race",f.race); setIf("pers",f.pers); setIf("land",f.land); setIf("nw",f.nw);
+  setIf("honor",f.honor); setIf("pop",f.pop); setIf("maxpop",f.maxpop);
+  setIf("offense",f.offense); setIf("defense",f.defense);
+  if(f.tpa!=null){ p.mdtpa=f.tpa; if(!num(p.tpa)) p.tpa=f.tpa; }
+  if(f.wpa!=null){ p.mdwpa=f.wpa; if(!num(p.wpa)) p.wpa=f.wpa; }
+  if(f.armyOut!=null) p.armyOut=f.armyOut;
+  if(f.returnTicks!=null){ p.armyOut=true; p.returnTick=(STATE.tick||0)+Math.ceil(f.returnTicks); }
+  if(f.generalsUsed!=null) p.generalsUsed=f.generalsUsed;
+  kd._rev=Date.now();
+  return true;
+}
+
+/* Parse the province table from a kingdom_details page (WoL format).
+   Rows: "Slot<TAB>Name<TAB>Race<TAB>Land acres<TAB>NetWorth gc<TAB>NW/Acre<TAB>Nobility".
+   Empty slots are "-". Markers like *, (M), (S) are stripped from names. */
+function parseKingdomProvinces(txt, kd){
+  if(!txt||!kd) return 0;
+  kd.provinces=kd.provinces||[];
+  const races=["Avian","Dark Elf","Dwarf","Elf","Faery","Halfling","Human","Orc","Undead"];
+  // isolate the Provinces section (between "Provinces" and "War Doctrines"/end)
+  let body=txt;
+  const pi=txt.search(/\bProvinces\b/);
+  if(pi>=0){ body=txt.slice(pi); }
+  const we=body.search(/War Doctrines/i); if(we>=0) body=body.slice(0,we);
+  const lines=body.split(/\n+/);
+  let added=0, seen=[];
+  for(const raw of lines){
+    const line=raw.replace(/\u00a0/g," ").replace(/\t+/g,"\t").trim();
+    if(!line) continue;
+    // split on tabs OR runs of 2+ spaces
+    let cols=line.split(/\t|\s{2,}/).map(c=>c.trim()).filter(c=>c!=="");
+    if(cols.length<4) continue;
+    // first col must be a slot number
+    if(!/^\d{1,3}$/.test(cols[0])) continue;
+    // empty slot rows are just "N - - - - -"
+    if(cols.slice(1).every(c=>c==="-")) continue;
+    let name=(cols[1]||"").replace(/\*/g,"").replace(/\((?:M|S)\)/g,"").trim();
+    if(!name||name==="-") continue;
+    // find race among the remaining columns
+    let race=""; for(const c of cols){ for(const r of races){ if(c.toLowerCase()===r.toLowerCase()){ race=r; break; } } if(race) break; }
+    // edge case: name and race joined by a single space (e.g. "On-Amur Human")
+    if(!race){ for(const r of races){ const rx=new RegExp("\\s+"+r.replace(/ /g,"\\s+")+"$","i"); if(rx.test(name)){ race=r; name=name.replace(rx,"").trim(); break; } } }
+    // land = first "N acres" or first plain number after race
+    let land=0; const lm=line.match(/([\d,]+)\s*acres/i); if(lm) land=parseInt(lm[1].replace(/,/g,""))||0;
+    // net worth = first "N gc"
+    let nw=0; const nwm=line.match(/([\d,]+)\s*gc/i); if(nwm) nw=parseInt(nwm[1].replace(/,/g,""))||0;
+    // upsert by name
+    let p=kd.provinces.find(x=>(x.name||"").toLowerCase()===name.toLowerCase());
+    if(!p){ p={id:uid(),name:name,race:"",pers:"",land:0,nw:0,honor:0,defense:0,offense:0,tpa:"",wpa:"",mdtpa:"",mdwpa:"",armyOut:false,returnTick:0,incomingLand:0,generalsUsed:0,pop:0,maxpop:0}; kd.provinces.push(p); added++; }
+    if(race) p.race=race;
+    if(land) p.land=land;
+    if(nw) p.nw=nw;
+    seen.push(name.toLowerCase());
+  }
+  if(added) kd._rev=Date.now();
+  return added;
+}
+
+/* Collapse any enemy KDs that share the same location into a single record.
+   Keeps the newest name, merges all provinces (dedup by name), preserves wave/targets. */
+function dedupEnemiesByLoc(){
+  if(!STATE||!STATE.enemies) return false;
+  const byLoc={}; const removed=[];
+  const ids=Object.keys(STATE.enemies);
+  for(const id of ids){
+    const e=STATE.enemies[id]; const loc=(e.loc||"").trim();
+    if(!loc){ continue; }
+    if(!byLoc[loc]){ byLoc[loc]=id; continue; }
+    // merge e into the keeper
+    const keep=STATE.enemies[byLoc[loc]];
+    // newest name wins
+    if((e._rev||0) > (keep._rev||0) && e.name && !/^KD |^Unnamed/i.test(e.name)) keep.name=e.name;
+    else if((!keep.name || /^KD |^Unnamed/i.test(keep.name)) && e.name) keep.name=e.name;
+    // merge provinces by name
+    keep.provinces=keep.provinces||[];
+    (e.provinces||[]).forEach(p=>{
+      const ex=keep.provinces.find(q=>(q.name||"").toLowerCase()===(p.name||"").toLowerCase());
+      if(ex){ Object.keys(p).forEach(k=>{ if(p[k]!=null && p[k]!=="" && p[k]!==0) ex[k]=p[k]; }); }
+      else keep.provinces.push(p);
+    });
+    // merge wave/targets if keeper empty
+    if((!keep.wave||!keep.wave.length) && e.wave&&e.wave.length) keep.wave=e.wave;
+    if((!keep.targets||!keep.targets.length) && e.targets&&e.targets.length) keep.targets=e.targets;
+    keep._rev=Date.now();
+    removed.push(id);
+  }
+  removed.forEach(id=>{ delete STATE.enemies[id]; if(STATE.activeEnemy===id) STATE.activeEnemy=null; });
+  if(removed.length && !STATE.activeEnemy) STATE.activeEnemy=Object.keys(STATE.enemies)[0]||null;
+  return removed.length>0;
+}
+async function syncPull(){
+  const url=(STATE.settings.syncUrl||"").trim(); if(!url){ syncOn=false; return; }
+  const base=url.replace(/\/+$/,"");
+  const k=STATE.settings.syncKey?("&key="+encodeURIComponent(STATE.settings.syncKey)):"";
+  // 1) pull the game intel feed (new scouts/news from the game)
+  try{
+    const res=await fetch(base+"/feed?since="+syncCursor+k);
+    const j=await res.json();
+    syncOn=true;
+    if(j && j.entries && j.entries.length){
+      let applied=0;
+      j.entries.forEach(en=>{ if(routeFeedEntry(en)) applied++; });
+      syncCursor=j.cursor||syncCursor;
+      if(applied){ dedupEnemiesByLoc(); save(); render(); }
+    }
+  }catch(e){ syncOn=false; }
+  // 2) pull shared state (other admins' edits) and merge by revision — no duplicates
+  try{
+    const rs=await fetch(base+"/state?key="+encodeURIComponent(STATE.settings.syncKey||"")+"&_="+Date.now());
+    if(rs.ok){
+      const remote=await rs.json();
+      if(remote && (remote.myKd||remote.enemies)){
+        let changed=false;
+        // myKd: newer revision wins
+        if(remote.myKd && (remote.myKd._rev||0) > (STATE.myKd._rev||0)){ STATE.myKd=remote.myKd; changed=true; }
+        // enemies: merge each by id+revision; dedupe by location
+        STATE.enemies=STATE.enemies||{};
+        const byLoc={};
+        Object.values(STATE.enemies).forEach(e=>{ if(e.loc) byLoc[e.loc]=e.id; });
+        for(const id in (remote.enemies||{})){
+          const re=remote.enemies[id], ce=STATE.enemies[id];
+          // if a different local KD already holds this location, keep the newer, drop the other
+          if(re.loc && byLoc[re.loc] && byLoc[re.loc]!==id){
+            const other=STATE.enemies[byLoc[re.loc]];
+            if((re._rev||0) >= (other._rev||0)){ delete STATE.enemies[byLoc[re.loc]]; STATE.enemies[id]=re; byLoc[re.loc]=id; changed=true; }
+            continue;
+          }
+          if(!ce || (re._rev||0) > (ce._rev||0)){ STATE.enemies[id]=re; if(re.loc) byLoc[re.loc]=id; changed=true; }
+        }
+        if(remote.activeEnemy && STATE.enemies[remote.activeEnemy] && !STATE.activeEnemy){ STATE.activeEnemy=remote.activeEnemy; }
+        if(dedupEnemiesByLoc()) changed=true;
+        if(changed){ save(); render(); }
+      }
+    }
+  }catch(e){}
+}
+
+function openPasteIntel(){
+  const e=curEnemy();
+  openModal(`<div class="mh"><h3>Paste Game Intel</h3><button class="close" data-act="closemodal">×</button></div>
+    <div class="mb"><p class="note" style="margin-bottom:10px;line-height:1.6">Cast your op in game (<b>SoT · SoM · SoS · Survey · Infiltrate</b>), select the page text (Ctrl+A) and copy it, then paste below. I'll auto-detect the type, match the province in <b style="color:var(--head)">${esc(e?e.name:"the active enemy KD")}</b>, and update its intel. If the province isn't stored yet, it'll be added.</p>
+    <textarea id="intelText" placeholder="Paste the whole intel page here…" style="min-height:200px"></textarea>
+    <div id="intelPreview" class="note" style="margin-top:8px"></div></div>
+    <div class="mf"><button class="btn ghost" data-act="closemodal">Cancel</button><button class="btn gold" data-act="parseintel">Apply intel</button></div>`);
+}
+function grabNum(txt,res){ // first matching number for any regex in list
+  for(const r of res){ const m=txt.match(r); if(m) return num(m[1]); } return null;
+}
+function parseIntelText(txt){
+  const t=txt.replace(/\u00a0/g," ");
+  const out={kind:null, name:null, fields:{}};
+  // province name: "Throne ... of NAME (x:y)" or "Spy on Throne of NAME" or first "NAME (x:y)"
+  let m=t.match(/(?:of|on)\s+([A-Za-z'’\- ]{2,40})\s*\(\d{1,2}:\d{1,2}\)/) || t.match(/([A-Za-z'’\- ]{2,40})\s*\(\d{1,2}:\d{1,2}\)/);
+  if(m){ out.name=m[1].trim()
+    .replace(/^(?:throne|military|sciences?|survey|infiltrate|intel(?:ligence)?|spy)\s+/i,"")
+    .replace(/^(?:intelligence|report)?\s*(?:of|on)\s+/i,"").trim(); }
+  const low=t.toLowerCase();
+  if(/ruler name|personality.*race|race.*personality|throne/i.test(t) && /networth/i.test(t)) out.kind="sot";
+  else if(/spy on military|military intel|standing army|troops at home|practical offense|defense at home|army is out|returning in/i.test(low)) out.kind="som";
+  else if(/spy on sciences|science intelligence|books|scientists/i.test(low)) out.kind="sos";
+  else if(/survey|buildings? breakdown|barren land/i.test(low) && /homes|farms|guilds/i.test(low)) out.kind="survey";
+  else if(/infiltrate|thieves(' )?guilds?|thievery intelligence/i.test(low)) out.kind="infil";
+  else if(/networth|throne/i.test(low)) out.kind="sot";
+  const f=out.fields;
+  if(out.kind==="sot"){
+    const race=t.match(/Race[:\s]+([A-Za-z ]+?)(?:\n|\||Personality|$)/i); if(race) f.race=race[1].trim();
+    const pers=t.match(/Personality[:\s]+(?:The\s+)?([A-Za-z ]+?)(?:\n|\||$)/i); if(pers) f.pers=pers[1].trim();
+    f.land=grabNum(t,[/Land[:\s]+([\d,]+)\s*Acres/i,/([\d,]+)\s*Acres/i]);
+    f.nw=grabNum(t,[/Net\s*worth[:\s]+([\d,]+)\s*gc/i,/Networth[:\s]+([\d,]+)/i]);
+    f.honor=grabNum(t,[/Honor[:\s]+([\d,]+)/i]);
+    f.pop=grabNum(t,[/Total Population[:\s]+([\d,]+)/i,/Population[:\s]+([\d,]+)/i]);
+    f.maxpop=grabNum(t,[/Max(?:imum)? Population[:\s]+([\d,]+)/i]);
+    const peas=grabNum(t,[/Peasants[:\s]+([\d,]+)/i]); if(peas!=null) f.peasants=peas;
+    f.offense=grabNum(t,[/Mod(?:ified)? Offense[:\s]+([\d,]+)/i,/Offense[:\s]+([\d,]+)/i]);
+    f.defense=grabNum(t,[/Mod(?:ified)? Defense[:\s]+([\d,]+)/i,/Defense[:\s]+([\d,]+)/i]);
+    f.tpa=grabNum(t,[/Thieves per Acre[:\s]+([\d.]+)/i,/TPA[:\s]+([\d.]+)/i]);
+    f.wpa=grabNum(t,[/Wizards? per Acre[:\s]+([\d.]+)/i,/WPA[:\s]+([\d.]+)/i]);
+  } else if(out.kind==="som"){
+    f.offense=grabNum(t,[/Mod(?:ified)? Offense[:\s]+([\d,]+)/i,/Practical Offense[:\s]+([\d,]+)/i,/Offense[:\s]+([\d,]+)/i]);
+    f.defense=grabNum(t,[/(?:Modified|Practical)? ?Defense at home[:\s]+([\d,]+)/i,/Mod(?:ified)? Defense[:\s]+([\d,]+)/i,/Practical Defense[:\s]+([\d,]+)/i,/Defense[:\s]+([\d,]+)/i]);
+    // army out & return
+    if(/army (?:is )?(?:out|away)|troops? (?:are )?(?:out|away)|returning/i.test(t)) f.armyOut=true;
+    const rt=grabNum(t,[/return(?:s|ing)? in[:\s]+([\d.]+)/i,/([\d.]+)\s*(?:ticks?|hours?)\s+(?:until|till|to)\s+return/i]);
+    if(rt!=null){ f.armyOut=true; f.returnTicks=rt; }
+    const gu=grabNum(t,[/([\d]+)\s*Generals? (?:out|away|sent)/i,/Generals?[:\s]+([\d]+)\s*\/\s*\d/i]); if(gu!=null) f.generalsUsed=gu;
+  } else if(out.kind==="infil"){
+    f.tpa=grabNum(t,[/Thieves per Acre[:\s]+([\d.]+)/i,/TPA[:\s]+([\d.]+)/i]);
+    const th=grabNum(t,[/([\d,]+)\s*thieves/i]); if(th!=null) f.thieves=th;
+  } else if(out.kind==="sos"){
+    f.books=grabNum(t,[/Total (?:Books|Science)[:\s]+([\d,]+)/i,/([\d,]+)\s*books/i]);
+  } else if(out.kind==="survey"){
+    f.land=grabNum(t,[/Total Land[:\s]+([\d,]+)/i,/([\d,]+)\s*Acres/i]);
+  }
+  return out;
+}
+function applyIntel(){
+  const e=curEnemy(); if(!e){ toast("Pick an enemy KD first."); return; }
+  const txt=gv("intelText"); if(!txt.trim()){ toast("Paste the intel page text first."); return; }
+  if(/Total Provinces\s+\d+|Net\s*Worth Rank|Land Rank|Honor Rank/i.test(txt)){
+    toast("That's a kingdom summary page, not a province scout. Paste a single province's SoT/SoM/etc instead.");
+    return;
+  }
+  const r=parseIntelText(txt);
+  if(!r.kind){ toast("Couldn't recognize that as SoT / SoM / SoS / Survey / Infiltrate."); return; }
+  if(!r.name){ toast("Found a "+r.kind.toUpperCase()+" but no province name (need 'Name (x:y)')."); return; }
+  let p=e.provinces.find(x=>x.name.toLowerCase()===r.name.toLowerCase());
+  let created=false;
+  if(!p){ p={id:uid(),name:r.name,race:"",pers:"",land:0,nw:0,honor:0,defense:0,offense:0,tpa:"",wpa:"",mdtpa:"",mdwpa:"",armyOut:false,returnTick:0,incomingLand:0,generalsUsed:0,pop:0,maxpop:0}; created=true; }
+  const f=r.fields, applied=[];
+  const setIf=(key,val,label)=>{ if(val!=null && val!=="" && !(typeof val==="number"&&isNaN(val))){ p[key]=val; applied.push(label||key); } };
+  setIf("race",f.race); setIf("pers",f.pers); setIf("land",f.land); setIf("nw",f.nw,"networth");
+  setIf("honor",f.honor); setIf("pop",f.pop); setIf("maxpop",f.maxpop);
+  setIf("offense",f.offense); setIf("defense",f.defense);
+  if(f.tpa!=null){ p.mdtpa=f.tpa; if(!num(p.tpa)) p.tpa=f.tpa; applied.push("tpa"); }   // intel TPA is modified
+  if(f.wpa!=null){ p.mdwpa=f.wpa; if(!num(p.wpa)) p.wpa=f.wpa; applied.push("wpa"); }
+  if(f.armyOut!=null){ p.armyOut=f.armyOut; applied.push("army out"); }
+  if(f.returnTicks!=null){ p.returnTick=STATE.tick+Math.ceil(f.returnTicks); applied.push("return tick"); }
+  if(f.generalsUsed!=null){ p.generalsUsed=f.generalsUsed; applied.push("generals used"); }
+  if(created) mutate(()=>{ e.provinces.push(p); }); else mutate(()=>{});
+  save();
+  closeModal();
+  toast((created?"Added ":"Updated ")+p.name+" from "+r.kind.toUpperCase()+(applied.length?" — "+applied.join(", "):""));
+}
+
+function openPasteNews(){
+  const e=curEnemy();
+  openModal(`<div class="mh"><h3>Paste KD News</h3><button class="close" data-act="closemodal">×</button></div>
+    <div class="mb"><p class="note" style="margin-bottom:10px;line-height:1.5">Open <b>KD News</b> in the game, copy the page text, and paste below. I'll scan for attacks by <b style="color:var(--head)">${esc(e?e.name:"the enemy")}</b> provinces and update their <b>incoming land</b> + mark their armies <b>out</b>. (No live connection to the game is possible, so this is paste-driven.)</p>
+    <textarea id="newsText" placeholder="Paste the news lines here…"></textarea></div>
+    <div class="mf"><button class="btn ghost" data-act="closemodal">Cancel</button><button class="btn gold" data-act="parsenews">Scan & update</button></div>`);
+}
+function parseNewsText(txt){
+  const e=curEnemy(); if(!e) return 0;
+  const lines=txt.split(/\n+/);
+  const acresRe=/([\d,]+)\s*acres/i;
+  let hits=0;
+  e.provinces.forEach(p=>{
+    const nm=(p.name||"").toLowerCase(); if(!nm) return;
+    lines.forEach(L=>{
+      const low=L.toLowerCase();
+      if(!low.includes(nm)) return;
+      const aggressor = low.indexOf(nm) < low.search(/invad|captur|attack|conquer|raz|ambush|plunder/);
+      if(/(captured|invaded|conquered)/.test(low) && aggressor){
+        p.armyOut=true; const m=L.match(acresRe); if(m) p.incomingLand=num(p.incomingLand)+num(m[1]);
+        p.newsNote=L.trim().slice(0,140); hits++;
+      } else if(/returns?/.test(low) && low.includes(nm)){
+        p.armyOut=false; hits++;
+      }
+    });
+  });
+  return hits;
+}
+function parseNews(){
+  const e=curEnemy(); if(!e){toast("Select an enemy KD first.");return;}
+  const txt=gv("newsText"); if(!txt.trim()){toast("Paste the news text first.");return;}
+  const hits=parseNewsText(txt);
+  mutate(()=>{}); save(); closeModal();
+  toast(hits?`Updated intel from ${hits} news line(s).`:"No matching attacks found — make sure province names match your stored enemy intel.");
+}
+function restoreJson(txt){
+  try{ const s=JSON.parse(txt); if(!s.myKd||!s.enemies) throw 0;
+    mutate(()=>{STATE=migrate(s);VIEW="wave";}); toast("Backup restored."); }
+  catch(e){ toast("That doesn't look like a valid War Room backup file."); }
+}
+
+function saveSettings(){
+  mutate(()=>{
+    const s=STATE.settings;
+    s.rangeLow=num(gv("set_rl"))||80; s.rangeHigh=num(gv("set_rh"))||125;
+    s.defGenerals=num(gv("set_dg"))||4; s.defGensAtk=num(gv("set_dga"))||1;
+    s.syncUrl=gv("set_sync").trim(); s.syncKey=gv("set_synckey").trim(); syncCursor=0; if(s.syncUrl) syncPull();
+    s.fanaPct=num(gv("set_fp")); s.blPct=num(gv("set_bp"));
+    s.casRate=num(gv("set_cas"))||7.5; s.lsPerAcre=num(gv("set_ls"))||22;
+    STATE.tick=num(gv("set_tick"));
+    const ags=gv("set_agestart"); if(ags){ s.ageStart=new Date(ags).toISOString(); }
+  });
+  toast("Settings saved.");
+}
+
+/*══════════════ SAMPLE DATA ══════════════*/
+const SAMPLE_VERSION=4;   // bump when sample data changes
+function seed(force){
+  if(!force && (STATE && (STATE.myKd.provinces.length || Object.keys(STATE.enemies).length))) return;
+  if(!STATE) STATE=defaultState();
+  STATE.sampleVersion=SAMPLE_VERSION;
+  STATE.isSample=true;
+  STATE.myKd={name:"Knights of the Dawn",loc:"7:3",provinces:[
+    mk("Stormhold","Orc","Warrior",1240,785703,295324,183437,4,true,true),
+    mk("Ironvale","Avian","Tactician",1512,1102207,501486,327135,4,true,false),
+    mk("Goldspire","Human","General",1297,866317,378216,205513,5,true,false),
+    mk("Thornwatch","Dwarf","Paladin",992,639005,303092,153834,4,false,false),
+    mk("Emberlyn","Dark Elf","Mystic",1448,1011892,0,478000,4,true,false),
+    mk("Highmarch","Elf","War Hero",1098,739493,356058,231983,4,true,false),
+    mk("Ravencrest","Undead","Necromancer",1597,1133183,517883,251342,4,true,false),
+    mk("Oakenshield","Undead","Heretic",1156,777996,346450,262069,4,true,false),
+    mk("Silverbrook","Orc","Warrior",1606,1117446,496004,277085,4,true,true),
+    mk("Drakemoor","Human","General",1370,976822,426906,237394,5,true,false),
+    mk("Wolfden","Avian","Tactician",1638,1136376,438540,352779,4,true,false),
+    mk("Eaglecrest","Halfling","Rogue",1578,1038809,481872,312961,4,false,false),
+    mk("Frosthelm","Elf","Mystic",1405,1016896,0,492000,4,true,false),
+    mk("Suncrown","Faery","Heretic",1089,785194,0,401000,4,false,false),
+    mk("Mistvale","Orc","Warrior",1502,1030879,396059,308180,4,true,true),
+    mk("Stonegate","Human","Artisan",1378,940244,341883,222152,4,true,false),
+    mk("Bramblewood","Undead","Necromancer",1000,724748,352291,184705,4,true,false),
+    mk("Lionsgate","Dwarf","Paladin",1334,857702,419905,227214,4,false,false),
+    mk("Falconridge","Avian","Tactician",1376,867582,319885,211053,4,true,false),
+    mk("Winterfort","Dark Elf","Mystic",1569,1144191,0,549000,4,true,false),
+    mk("Ambermill","Human","General",962,679957,324359,205330,5,true,false),
+    mk("Shadowfen","Orc","Warrior",1470,1033750,398835,281462,4,true,true),
+    mk("Brightwater","Elf","War Hero",1557,1050763,482869,313400,4,true,false),
+    mk("Ironwood","Halfling","Rogue",1132,732226,355189,190418,4,false,false),
+    mk("Dawnkeep","Faery","Heretic",1473,1061350,0,512000,4,false,false),
+  ]};
+  const eid=uid();
+  STATE.enemies={[eid]:{id:eid,name:"The Crimson Covenant",loc:"4:12",status:"war",warMode:"in",eowcfExit:"",
+    note:"Open on the low-def cores; ambush the armies coming home.",wave:[],provinces:[
+      me("Blackmoor","Undead",1108,812269,108000,346154,1.6,4.0,false,0,0,0,24336,22274),
+      me("Ravenfall","Faery",1095,671063,238000,0,2.8,6.4,false,0,0,0,22294,24094),
+      me("Duskmere","Orc",1545,946221,169000,313641,1.8,1.2,false,0,0,0,36084,34712),
+      me("Hollowreach","Elf",1698,1155300,322000,0,1.4,7.2,false,0,0,0,40397,35129),
+      me("Grimwald","Dwarf",1069,676481,139000,285627,1.2,4.1,true,120,340,4,22960,22887),
+      me("Ashford","Human",1391,836647,96000,169618,1.6,4.7,false,0,0,0,32161,31477),
+      me("Nightshade","Avian",1429,1002179,123000,273723,1.3,2.7,false,0,0,0,32839,31188),
+      me("Vipersden","Halfling",1244,814540,199000,142302,2.1,2.6,true,121,410,4,26786,26672),
+      me("Thornspire","Dark Elf",1189,769319,172000,263020,2.3,2.0,false,0,0,0,26094,25508),
+      me("Bonechapel","Orc",1567,1125478,152000,381538,0.8,3.6,false,0,0,0,34174,35657),
+      me("Darkhollow","Human",1076,762172,104000,311101,1.2,4.6,true,124,180,4,22640,22478),
+      me("Cinderfall","Undead",1262,855990,178000,300191,1.5,2.7,false,0,0,0,29256,26504),
+      me("Gloomharbor","Elf",1610,1080701,305000,0,1.6,7.8,false,0,0,0,35308,33473),
+      me("Wraithmoor","Faery",1495,1002034,287000,0,2.4,6.9,false,0,0,0,33295,32468),
+      me("Bleakstone","Orc",1595,1150648,167000,327063,1.6,1.0,false,0,0,0,34900,33708),
+      me("Serpentcoil","Human",1178,779253,128000,245889,2.2,1.5,false,0,0,0,26216,24041),
+      me("Murkwater","Avian",1523,977876,170000,381196,1.6,4.2,true,124,650,4,30667,34435),
+      me("Doomvale","Dwarf",1063,673331,168000,115614,1.1,3.6,false,0,0,0,25035,21743),
+      me("Shadewick","Dark Elf",1307,958533,178000,323851,1.8,1.1,false,0,0,0,30812,27732),
+      me("Cryptgate","Halfling",1224,860316,99000,229649,1.3,3.6,true,123,520,2,27789,25597),
+      me("Palewatch","Orc",1210,754146,112000,267641,1.4,4.3,false,0,0,0,24424,24721),
+      me("Vexmoor","Human",997,601469,194000,192754,1.1,3.9,false,0,0,0,20034,20758),
+      me("Grimshade","Elf",1243,835122,141000,327296,2.0,1.7,true,121,650,4,28755,25286),
+      me("Nethercliff","Undead",1613,1049683,150000,185938,2.3,2.7,false,0,0,0,38335,36178),
+      me("Bloodthorn","Faery",1407,902109,266000,0,3.1,5.8,false,0,0,0,29189,31234),
+    ]}};
+  STATE.activeEnemy=eid;
+  // a second, post-war KD to show EoWCF board
+  const eid2=uid(); const exit=new Date(Date.now()+1000*60*60*7.5).toISOString().slice(0,16);
+  STATE.enemies[eid2]={id:eid2,name:"Iron Wolves",loc:"2:8",status:"eowcf",warMode:"out",eowcfExit:exit,
+    note:"Beaten last war — exits soon, possible re-hit.",wave:[],provinces:[
+      me("Fenris","Orc",1600,1150000,0,0,"","",false,0,0,0),
+      me("Skoll","Avian",1280,840000,0,0,"","",false,0,0,0),
+    ]};
+  let _i=0; Object.values(STATE.enemies).forEach(en=>en.provinces.forEach(p=>{
+    if(!p.sci) p.sci={};
+    if(p.sci.cast==null) p.sci.cast=Math.round((2+(_i*1.7)%7)*10)/10;   // 2.0–9.0%
+    if(p.sci.wts==null)  p.sci.wts =Math.round((1+(_i*1.3)%5)*10)/10;   // 1.0–6.0%
+    _i++;
+  }));
+  const PSET=["Warrior","General","Tactician","Mystic","Rogue","Paladin"];
+  Object.values(STATE.enemies).forEach(en=>en.provinces.forEach((p,i)=>{
+    if(!p.pers) p.pers=PSET[i%PSET.length];
+    if(!p.honor) p.honor=Math.round(num(p.nw)*0.05 + i*1200);
+    if(num(p.tpa)&&!num(p.mdtpa)) p.mdtpa=Math.round(num(p.tpa)*1.15*100)/100;
+    if(num(p.wpa)&&!num(p.mdwpa)) p.mdwpa=Math.round(num(p.wpa)*1.15*100)/100;
+  }));
+  STATE.tick=117;
+}
+function mk(name,race,pers,land,nw,off,def,gen,fana,bl){return {id:uid(),name,race,pers,land,nw,offense:off,defense:def,generals:gen,fana,bl,fanaOn:false,blOn:false};}
+function me(name,race,land,nw,def,off,tpa,wpa,out,rt,inc,gu,pop,mp){return {id:uid(),name,race,pers:"",honor:0,land,nw,defense:def,offense:off,tpa,wpa,mdtpa:tpa,mdwpa:wpa,armyOut:out,returnTick:rt,incomingLand:inc,generalsUsed:gu,pop:pop||0,maxpop:mp||0};}
+
+/*══════════════ LIVE CLOCK / COUNTDOWNS ══════════════*/
+function eowcfText(exit){
+  const diff=new Date(exit)-Date.now();
+  if(diff<=0) return "expired";
+  const ticks=Math.ceil(diff/3.6e6);
+  return `exits in ${ticks} tick${ticks===1?"":"s"}`;
+}
+let lastHourKey=null;
+/* convert ISO string -> value for <input type=datetime-local> in local time */
+function toLocalDT(iso){ if(!iso) return ""; const d=new Date(iso); if(isNaN(d)) return ""; const p=n=>String(n).padStart(2,"0"); return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"T"+p(d.getHours())+":"+p(d.getMinutes()); }
+/* Utopian calendar: 1 hr = 1 Utopian day; 24 days = 1 month; 7 months (Jan-Jul) = 1 year.
+   Months change at 18:00 GMT+0. Age starts Jan 1, YR0 at the configured ageStart timestamp. */
+const UTOPIAN_MONTHS=["January","February","March","April","May","June","July"];
+function utopianDate(now){
+  now = now || new Date();
+  // age start: ISO string in settings, default mid-2026 placeholder until user sets it
+  const startStr=(STATE&&STATE.settings&&STATE.settings.ageStart)||"2026-06-01T18:00:00Z";
+  const start=new Date(startStr);
+  // each Utopian day = 1 hour, ticking at XX:00. Month boundary aligns to 18:00 GMT.
+  let hoursElapsed=Math.floor((now-start)/3.6e6);
+  if(hoursElapsed<0) hoursElapsed=0;
+  // day-of-age counting from 0 -> compute year/month/day
+  const dayOfAge=hoursElapsed;                 // 0-based Utopian days since age start
+  const year=Math.floor(dayOfAge/(7*24));      // 7 months * 24 days
+  const dayInYear=dayOfAge%(7*24);
+  const month=Math.floor(dayInYear/24);        // 0..6
+  const day=(dayInYear%24)+1;                  // 1..24
+  return { year, month, day, label: UTOPIAN_MONTHS[month]+" "+day+", YR"+year };
+}
+function tickClock(){
+  const c=document.getElementById("realClock");
+  const now=new Date();
+  if(c) c.textContent=now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  const rd=document.getElementById("realDate");
+  if(rd) rd.textContent=now.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric', year:'numeric'});
+  const ud=document.getElementById("utopiaDate");
+  if(ud){ const u=utopianDate(now); ud.textContent="🏰 "+u.label; }
+  // EoWCF countdowns update once per tick (hour), in place — never re-render the view
+  const hk=Math.floor(Date.now()/3.6e6);
+  if(hk!==lastHourKey){
+    lastHourKey=hk;
+    document.querySelectorAll('.cd[data-exit]').forEach(el=>{
+      const diff=new Date(el.dataset.exit)-Date.now();
+      el.textContent=eowcfText(el.dataset.exit);
+      el.classList.toggle("soon", diff>0 && diff<6*3.6e6);
+      el.classList.toggle("exp", diff<=0);
+    });
+  }
+}
+
+/*══════════════ BOOT ══════════════*/
+(async function(){
+  if(window.__WR_RESETTING) return;
+  await load();                                  // shim + server-first; never seeds sample data
+  if(!STATE) { STATE=defaultState(); }
+  STATE.activeEnemy = STATE.activeEnemy && STATE.enemies[STATE.activeEnemy] ? STATE.activeEnemy : (Object.keys(STATE.enemies)[0]||null);
+  setSaveStatus(storageOK?"saved":"local");
+  render();
+  setInterval(tickClock,1000); tickClock();
+  setInterval(syncPull,4000); if(STATE.settings.syncUrl) syncPull();
+  document.addEventListener("dragover",ev=>{ const m=90; if(ev.clientY<m) window.scrollBy(0,-18); else if(window.innerHeight-ev.clientY<m) window.scrollBy(0,18); });
+  window.addEventListener&&window.addEventListener("beforeunload",()=>{ try{ save(); }catch(e){} });
+  document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden"){ try{ save(); }catch(e){} } });
+})();
+</script>
+</body>
+</html>

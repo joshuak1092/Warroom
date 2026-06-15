@@ -1,0 +1,38 @@
+# Live data — never commit
+state.json
+state-backups/
+intel-log.json
+
+# All backup files from edits
+*.bak-*
+*.bak
+*.tar.gz
+
+# Node
+node_modules/
+
+# Stray command-output files
+*?L1*
+*?L2*
+*?L3*
+*?L4*
+*:ok
+*:opPct
+
+# Scratch fix scripts (one-offs, not the real app)
+home-kd-fix.js
+kdbar-fix.js
+kdpage-fix.js
+kdpage-strict.js
+mykd-fix.js
+nuke.js
+reset-fix.js
+strict-kd-fix.js
+
+# Bot files — launch script has hardcoded token + key, never commit
+bot-launch.js
+discord-bot.js
+
+# Bot files - token+key, never commit
+bot-launch.js
+discord-bot.js
