@@ -2222,7 +2222,7 @@ function rowsToObjects(text){
   const normHeaders=rows[0].map(h=>h.toLowerCase().replace(/[^a-z0-9]/g,""));
   const objs=rows.slice(1).map(r=>{
     const o={}; for(const f in map) o[f]=r[map[f]]!==undefined?r[map[f]].trim():"";
-    if(o.name) o.name=o.name.replace(/\s*\(\d{1,2}:\d{1,2}\)\s*$/,"").trim();
+    if(o.name) o.name=o.name.replace(/[~\u00ac`*]+/g,"").replace(/\s*\(\d{1,2}:\d{1,2}\)\s*$/,"").trim();
     o.__raw=r; o.__headers=normHeaders;
     return o;
   }).filter(o=>o.name && !/^(total|average|avg|sum)$/i.test(o.name));
@@ -2303,7 +2303,7 @@ function doImportEnemy(merge){
         if(homeLoc && realLoc===homeLoc){
           if(!STATE.myKd.provinces) STATE.myKd.provinces=[];
           buildEnemyProvs(byKd[key]).forEach(np=>{ const ex=STATE.myKd.provinces.find(p=>(p.name||"").toLowerCase()===np.name.toLowerCase());
-            if(ex) Object.assign(ex,{...np,id:ex.id,generals:ex.generals,fana:ex.fana,bl:ex.bl,fanaOn:ex.fanaOn,blOn:ex.blOn}); else { np.generals=STATE.settings.defGenerals; np.fanaOn=false; np.blOn=false; STATE.myKd.provinces.push(np); }
+            if(ex) Object.assign(ex,{...np,id:ex.id,generals:ex.generals,fana:ex.fana,bl:ex.bl,fanaOn:ex.fanaOn,blOn:ex.blOn}); /* update-only: do NOT add new provs to my KD from enemy import */
             homeCount++; });
           STATE.myKd._rev=Date.now();
           continue;

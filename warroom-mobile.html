@@ -87,7 +87,7 @@ select{cursor:pointer}
 .clock b{color:var(--gold)}
 
 .view{padding:24px 26px 80px}
-.view.anim>*{animation:rise .4s cubic-bezier(.2,.7,.3,1) backwards}
+.view.anim>*{animation:rise .35s cubic-bezier(.2,.7,.3,1)}.view>*{transform:none!important}
 .view.anim>*:nth-child(2){animation-delay:.05s}.view.anim>*:nth-child(3){animation-delay:.1s}.view.anim>*:nth-child(4){animation-delay:.15s}
 @keyframes rise{from{opacity:0;transform:translateY(8px)}}
 
@@ -429,7 +429,9 @@ details.panel[open] summary::after{content:"▾"}
   .view{padding:14px 11px 96px}
   .sumbar{grid-template-columns:1fr 1fr;gap:8px}
   .sumcell{padding:11px 13px}.sumcell .v{font-size:19px}
-  .kdrow{grid-template-columns:1fr auto;gap:7px 10px}
+  .kdrow{grid-template-columns:1fr;gap:8px 10px}
+  .kdrow .btnrow{width:100%;justify-content:flex-start;flex-wrap:wrap}
+  .kdrow>div:nth-child(5){display:none}
   .kdrow>div:nth-child(3),.kdrow>div:nth-child(4){display:none}
   .frow,.frow.f3{grid-template-columns:1fr 1fr}
   .mbox{max-width:100%}#modal{padding:12px 9px}
@@ -696,6 +698,13 @@ async function saveToServer(){
     else { toast("\u26a0 Save failed: "+(j.error||("HTTP "+r.status))); }
   }catch(e){ toast("\u26a0 Save to server failed: "+e.message); }
 }
+async function pullFromServer(){
+  try{ const su=((STATE.settings.syncUrl||window.location.origin)+"").replace(/\/+$/,""); const sk=STATE.settings.syncKey||(window.__WR_SYNC&&window.__WR_SYNC.key)||"";
+    const r=await fetch(su+"/state?key="+encodeURIComponent(sk)+"&_="+Date.now());
+    const d=await r.json();
+    if(d&&(d.myKd||d.enemies)){ STATE=Object.assign(STATE,d); try{await window.storage.set(STORE_KEY,JSON.stringify(STATE));}catch(e){} render(); }
+  }catch(e){ console.warn("pullFromServer failed",e); toast("\u26a0 Load failed: "+e.message); }
+}
 async function loadFromServer(){
   if(!confirm("Load FROM server? This replaces your current view with the server's saved copy.")) return;
   if(typeof pullFromServer==="function"){ await pullFromServer(); toast("\u2b07 Loaded latest from server."); }
@@ -888,6 +897,17 @@ function opChip(ol){
   return `<span class="mono" style="color:${c};font-size:11.5px;font-weight:700">${ol.label} · ${Math.round(ol.r*100)}%</span>`;
 }
 
+function blEligible(p){ const r=(p.race||"").toLowerCase(), pe=(p.pers||"").toLowerCase(); return r==="orc"||pe==="warrior"; }
+function allFanaOn(){ const ps=STATE.myKd.provinces||[]; if(!ps.length) return false;
+  return ps.every(p=>p.fanaOn && (!blEligible(p) || p.blOn)); }
+function toggleMassFana(){
+  const turnOn=!allFanaOn();
+  mutate(()=>{ (STATE.myKd.provinces||[]).forEach(p=>{
+    if(turnOn){ p.fana=true; p.fanaOn=true; if(blEligible(p)){ p.bl=true; p.blOn=true; } }
+    else { p.fanaOn=false; p.blOn=false; }
+  }); STATE.myKd._rev=Date.now(); });
+  toast(turnOn?"⚡ Fanaticism + Bloodlust ON (BL on Orc/Warrior)":"Fanaticism + Bloodlust cleared");
+}
 function curEnemy(){ return STATE.activeEnemy?STATE.enemies[STATE.activeEnemy]:null; }
 function statusBadge(st){
   const m={war:["b-war","⚔ WAR"],hostile:["b-hostile","⚠ HOSTILE"],eowcf:["b-eowcf","🕊 EoWCF"],
@@ -1876,6 +1896,7 @@ document.addEventListener("click",ev=>{
     case "exportwave": exportWaveCSV(); break;
     case "copywave": copyWaveText(); break;
     case "switchkd": mutate(()=>{STATE.activeEnemy=arg;VIEW="wave";}); break;
+    case "togglemassfana": toggleMassFana(); break;
     case "togglefana": mutate(()=>{const p=mp(arg);p.fanaOn=!p.fanaOn;}); break;
     case "togglebl": mutate(()=>{const p=mp(arg);p.blOn=!p.blOn;}); break;
     case "gen+": mutate(()=>{const p=mp(arg);p.generals=Math.min(MAX_GENERALS,num(p.generals)+1);}); break;
@@ -2216,7 +2237,11 @@ function parseCSV(text){
   return rows.filter(r=>r.some(x=>x.trim()!==""));
 }
 const ALIAS={
-  name:["province","prov","name","provincename","ruler","provname","target","slot"],
+  name:["province","prov","name","provincename","provname","target","slot"],
+  ruler:["ruler"],
+  kdloc:["kd","kdnum","kingdom","kdloc","loc","coords","kingdomnum","kdhash","location","kingdomloc"],
+  combo:["combo","racepers","rp"],
+  somdef:["somdef","somdefense"],
   race:["race"],
   pers:["personality","pers","persona","class"],
   land:["land","acres","acre","size","acreage","totalland"],
@@ -2264,7 +2289,7 @@ function rowsToObjects(text){
   const normHeaders=rows[0].map(h=>h.toLowerCase().replace(/[^a-z0-9]/g,""));
   const objs=rows.slice(1).map(r=>{
     const o={}; for(const f in map) o[f]=r[map[f]]!==undefined?r[map[f]].trim():"";
-    if(o.name) o.name=o.name.replace(/\s*\(\d{1,2}:\d{1,2}\)\s*$/,"").trim();
+    if(o.name) o.name=o.name.replace(/[~\u00ac`*]+/g,"").replace(/\s*\(\d{1,2}:\d{1,2}\)\s*$/,"").trim();
     o.__raw=r; o.__headers=normHeaders;
     return o;
   }).filter(o=>o.name && !/^(total|average|avg|sum)$/i.test(o.name));
@@ -2318,7 +2343,7 @@ function doImportEnemy(merge){
         if(homeLoc && realLoc===homeLoc){
           if(!STATE.myKd.provinces) STATE.myKd.provinces=[];
           buildEnemyProvs(byKd[key]).forEach(np=>{ const ex=STATE.myKd.provinces.find(p=>(p.name||"").toLowerCase()===np.name.toLowerCase());
-            if(ex) Object.assign(ex,{...np,id:ex.id}); else { np.generals=STATE.settings.defGenerals; STATE.myKd.provinces.push(np); } homeCount++; });
+            if(ex){ Object.assign(ex,{...np,id:ex.id}); homeCount++; } /* only update existing; do NOT add new provs to my KD */ });
           STATE.myKd._rev=Date.now(); continue;
         }
         let kd=realLoc?Object.values(STATE.enemies).find(e=>(e.loc||"")===realLoc):null;
