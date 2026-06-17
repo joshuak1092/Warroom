@@ -3,7 +3,7 @@
 const http=require("http"), fs=require("fs"), qs=require("querystring"), path=require("path");
 const PORT=process.env.PORT||process.argv[2]||8108, KEY=process.env.INTEL_KEY||process.argv[3]||"", SITEPASS=process.argv[4]||"";
 const LOG="intel-log.json", STATE_FILE="state.json", BACKUP_DIR="state-backups";
-const SERVER_VERSION="3.3-nosync-"+new Date().toISOString().slice(0,10);
+const SERVER_VERSION="3.5-nosync-"+new Date().toISOString().slice(0,10);
 if(!fs.existsSync(BACKUP_DIR)){ try{ fs.mkdirSync(BACKUP_DIR); }catch(e){} }
 function readState(){ try{ return JSON.parse(fs.readFileSync(STATE_FILE,"utf8")); }catch(e){ return {myKd:{name:"",loc:"",provinces:[]},enemies:{},activeEnemy:null,settings:{}}; } }
 function backupState(){ try{ if(!fs.existsSync(STATE_FILE)) return; const stamp=new Date().toISOString().replace(/[:.]/g,"-"); fs.copyFileSync(STATE_FILE, path.join(BACKUP_DIR,"state-"+stamp+".json")); const files=fs.readdirSync(BACKUP_DIR).filter(f=>f.startsWith("state-")).sort(); while(files.length>10){ try{ fs.unlinkSync(path.join(BACKUP_DIR,files.shift())); }catch(e){} } }catch(e){} }

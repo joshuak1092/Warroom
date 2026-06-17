@@ -616,7 +616,7 @@ function defaultState(){
   return {
     v:2,
     tick:0,
-    settings:{rangeLow:80,rangeHigh:125,ageStart:"2026-06-01T18:00:00Z",defGenerals:4,defGensAtk:1,fanaPct:5,blPct:10,
+    settings:{rangeLow:80,rangeHigh:125,ageStart:"2026-04-28T18:00:00Z",defGenerals:4,defGensAtk:1,fanaPct:5,blPct:10,
       genOffBonus:false, refMode:"myavg", lsPerAcre:22, casRate:7.5, newsUrl:"https://utopia-game.com/wol/game/news"},
     myKd:{name:"My Kingdom", loc:"3:4", provinces:[]},
     enemies:{},          // id -> {id,name,loc,status,warStart,eowcfExit,note,wave:[],provinces:[]}
@@ -676,8 +676,33 @@ function looksLikeOldSample(s){
     return false;
   }catch(e){ return false; }
 }
+function scrubProvinces(kd){
+  if(!kd||!Array.isArray(kd.provinces)) return;
+  const seen={}; const keep=[];
+  for(const p of kd.provinces){
+    let nm=cleanProvName(p.name||"");
+    if(!nm || /[%\d]/.test(nm) || nm.length<2){ continue; }
+    p.name=nm;
+    const key=nm.toLowerCase();
+    if(seen[key]){
+      const ex=seen[key];
+      const better=(a,b)=>{ const na=Number(a)||0, nb=Number(b)||0; return nb>na?b:a; };
+      ex.land=better(ex.land,p.land); ex.nw=better(ex.nw,p.nw); ex.honor=better(ex.honor,p.honor);
+      ex.offense=better(ex.offense,p.offense); ex.defense=better(ex.defense,p.defense);
+      if(!ex.race&&p.race) ex.race=p.race; if(!ex.pers&&p.pers) ex.pers=p.pers;
+      continue;
+    }
+    seen[key]=p; keep.push(p);
+  }
+  kd.provinces=keep;
+}
+function scrubAllProvinces(st){
+  if(!st) return;
+  if(st.myKd) scrubProvinces(st.myKd);
+  if(st.enemies) Object.values(st.enemies).forEach(scrubProvinces);
+}
 function migrate(s){ const d=defaultState(); s.settings={...d.settings,...(s.settings||{})}; if(!s.enemies)s.enemies={}; if(s.tick==null)s.tick=0;
-  Object.values(s.enemies).forEach(e=>{ if(!e.warMode) e.warMode = (e.status==="war"?"in":"out"); if(!e.targets) e.targets=[]; }); return s; }
+  Object.values(s.enemies).forEach(e=>{ if(!e.warMode) e.warMode = (e.status==="war"?"in":"out"); if(!e.targets) e.targets=[]; }); scrubAllProvinces(s); return s; }
 
 let saveTimer=null;
 function scheduleSave(){ setSaveStatus("save"); clearTimeout(saveTimer); saveTimer=setTimeout(save,400); }
@@ -2536,7 +2561,7 @@ function routeFeedEntry(en){
   return applyProvinceTo(kd, r);
 }
 
-function cleanProvName(n){ return ((n||"")+"").replace(/[~\u00ac`*]+/g,"").replace(/\s*\(\d{1,2}:\d{1,2}\)\s*$/,"").trim(); }
+function cleanProvName(n){ let s=((n||"")+""); s=s.replace(/[~¬`*™]+/g,""); s=s.replace(/\s*\(\d{1,2}:\d{1,2}\)\s*$/,""); s=s.replace(/(?:TM)?\d[\d.,]*%.*$/i,""); s=s.replace(/\s+(?:TM|\(M\)|\(S\))\s*$/i,""); return s.trim(); }:\d{1,2}\)\s*$/,""); s=s.replace(/(?:TM)?\d[\d.,]*%.*$/i,""); s=s.replace(/\s+(?:TM|\(M\)|\(S\))\s*$/i,""); return s.trim(); }:\d{1,2}\)\s*$/,"").trim(); }
 // write a parsed province (r) into a KD's province list; only real intel creates a province
 function applyProvinceTo(kd, r, updateOnly){
   if(!kd||!r||!r.name) return false;
@@ -2928,7 +2953,7 @@ const UTOPIAN_MONTHS=["January","February","March","April","May","June","July"];
 function utopianDate(now){
   now = now || new Date();
   // age start: ISO string in settings, default mid-2026 placeholder until user sets it
-  const startStr=(STATE&&STATE.settings&&STATE.settings.ageStart)||"2026-06-01T18:00:00Z";
+  const startStr=(STATE&&STATE.settings&&STATE.settings.ageStart)||"2026-04-28T18:00:00Z";
   const start=new Date(startStr);
   // each Utopian day = 1 hour, ticking at XX:00. Month boundary aligns to 18:00 GMT.
   let hoursElapsed=Math.floor((now-start)/3.6e6);
