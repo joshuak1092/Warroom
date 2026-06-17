@@ -622,7 +622,8 @@ function migrate(s){ const d=defaultState(); s.settings={...d.settings,...(s.set
   Object.values(s.enemies).forEach(e=>{ if(!e.warMode) e.warMode = (e.status==="war"?"in":"out"); if(!e.targets) e.targets=[]; }); scrubAllProvinces(s); return s; }
 
 let saveTimer=null;
-function scheduleSave(){ setSaveStatus("save"); clearTimeout(saveTimer); saveTimer=setTimeout(save,400); }
+async function pushToServer(){ try{ const su=((STATE.settings.syncUrl||location.origin)+"").replace(/\/+$/,""); const sk=STATE.settings.syncKey||""; const myN=(STATE.myKd&&STATE.myKd.provinces||[]).length, enN=Object.keys(STATE.enemies||{}).length; if(myN===0 && enN===0) return; const r=await fetch(su+"/save",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:sk,state:JSON.stringify(STATE)})}); const j=await r.json().catch(()=>({})); setSaveStatus(j&&j.success?"saved":"local"); }catch(e){ setSaveStatus("local"); } }
+function scheduleSave(){ setSaveStatus("save"); clearTimeout(saveTimer); saveTimer=setTimeout(function(){ save(); pushToServer(); },400); }
 
 async function pullFromServer(){
   try{ const su=(STATE.settings.syncUrl||"").trim(); const sk=STATE.settings.syncKey||"";
@@ -2677,7 +2678,7 @@ function parseKingdomProvinces(txt, kd, updateOnly){
     // edge case: name and race joined by a single space (e.g. "On-Amur Human")
     if(!race){ for(const r of races){ const rx=new RegExp("\\s+"+r.replace(/ /g,"\\s+")+"$","i"); if(rx.test(name)){ race=r; name=name.replace(rx,"").trim(); break; } } }
     // land = first "N acres" or first plain number after race
-    let land=0; const lm=line.match(/([\d,]+)\s*acres/i); if(lm) land=parseInt(lm[1].replace(/,/g,""))||0;
+    let land=0; const lm=line.match(/([\d,]+)\s*a(?:cres)?\b/i); if(lm) land=parseInt(lm[1].replace(/,/g,""))||0;
     // net worth = first "N gc"
     let nw=0; const nwm=line.match(/([\d,]+)\s*gc/i); if(nwm) nw=parseInt(nwm[1].replace(/,/g,""))||0;
     // upsert by cleaned name (prevents duplicates from markers/spacing/loc suffix)
@@ -2738,7 +2739,7 @@ async function syncPull(){
       let applied=0;
       j.entries.forEach(en=>{ if(routeFeedEntry(en)) applied++; });
       syncCursor=j.cursor||syncCursor;
-      if(applied){ dedupEnemiesByLoc(); save(); render(); }
+      if(applied){ dedupEnemiesByLoc(); save(); pushToServer(); render(); }
     }
   }catch(e){ syncOn=false; }
   // 2) pull shared state (other admins' edits) and merge by revision — no duplicates
