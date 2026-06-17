@@ -1453,6 +1453,81 @@ function compareChart(title,myVal,enVal,fmtFn){
   const row=(lbl,val,color)=>`<div class="bc-row"><span class="bc-name">${lbl}</span><span class="bc-bar"><span class="bc-fill" style="width:${Math.max(2,val/max*100)}%;background:${color}"></span></span><span class="bc-val">${f(val)}</span></div>`;
   return `<div class="panel"><div class="panel-h"><h3>${title}</h3></div><div class="bchart">${row("🛡 Mine",myVal,"var(--gold)")}${row("🎯 Enemy",enVal,"var(--red)")}</div></div>`;
 }
+// ===== REAL WAR ATTACK LOG (parsed from actual kingdom news) =====
+// Parse every attack line in a news page and record real attacks into STATE.warLog (deduped).
+function recordWarAttacks(txt){
+  if(!txt) return 0;
+  STATE.warLog = STATE.warLog || [];
+  const seen = new Set(STATE.warLog.map(a=>a.sig));
+  const myLoc = (STATE.myKd && STATE.myKd.loc) || "";
+  let added = 0;
+  const lines = txt.split(/\n+/);
+  // date context: lines like "January 2 of YR7" set the current date for following attacks
+  let curDate = "";
+  for(const raw of lines){
+    const L = raw.trim();
+    const dm = L.match(/^([A-Z][a-z]+ \d{1,2} of YR\d+)/);
+    if(dm){ curDate = dm[1]; }
+    // attack line: "N - Attacker (a:b) invaded M - Defender (c:d) and TYPE ..."
+    const m = L.match(/\d+\s*-\s*(.+?)\s*\((\d{1,2}:\d{1,2})\)\s+invaded\s+\d+\s*-\s*(.+?)\s*\((\d{1,2}:\d{1,2})\)\s+and\s+(\w+)([^.]*)/i);
+    if(!m) continue;
+    const atkName=m[1].trim(), atkLoc=m[2], defName=m[3].trim(), defLoc=m[4], verb=m[5].toLowerCase(), rest=m[6]||"";
+    // amount: acres or a number in the rest
+    let amount=0, unit="";
+    const am = rest.match(/([\d,]+)\s*acres/i);
+    if(am){ amount=parseInt(am[1].replace(/,/g,""))||0; unit="acres"; }
+    else { const nm=rest.match(/([\d,]{2,})/); if(nm){ amount=parseInt(nm[1].replace(/,/g,""))||0; unit="killed"; } }
+    // map verb -> attack type
+    let type="other";
+    if(/captur/.test(verb)) type="traditional";
+    else if(/raz/.test(verb)) type="raze";
+    else if(/massacr/.test(verb)) type="massacre";
+    else if(/plunder/.test(verb)) type="plunder";
+    else if(/conquer/.test(verb)) type="conquest";
+    else if(/ambush/.test(verb)) type="ambush";
+    else if(/learn|stole/.test(verb)) type="thievery";
+    // direction relative to MY kd
+    let dir="other";
+    if(atkLoc===myLoc) dir="ours";        // my province attacked someone
+    else if(defLoc===myLoc) dir="theirs"; // someone attacked my province
+    const sig = curDate+"|"+atkName+"|"+atkLoc+"|"+defName+"|"+defLoc+"|"+type+"|"+amount;
+    if(seen.has(sig)) continue;
+    seen.add(sig);
+    STATE.warLog.push({sig, date:curDate, atkName, atkLoc, defName, defLoc, type, amount, unit, dir, ts:Date.now()});
+    added++;
+  }
+  if(added) STATE._warRev = Date.now();
+  return added;
+}
+// Totals for the war log, split by direction and the two KD locations
+function warDateValue(ds){
+  const months={january:1,february:2,march:3,april:4,may:5,june:6,july:7,august:8,september:9,october:10,november:11,december:12};
+  const m=String(ds).match(/([A-Za-z]+)\s+(\d{1,2})\s+of\s+YR(\d+)/i);
+  if(!m) return 0;
+  const mo=months[m[1].toLowerCase()]||0;
+  return Number(m[3])*10000 + mo*50 + Number(m[2]);
+}
+function warLogStats(enemyLoc, sinceDate){
+  const myLoc=(STATE.myKd&&STATE.myKd.loc)||"";
+  const log=STATE.warLog||[];
+  const blank=()=>({attacks:0,trad:0,raze:0,massacre:0,plunder:0,conquest:0,ambush:0,land:0,killed:0});
+  const ours=blank(), theirs=blank();
+  const sinceV = sinceDate ? warDateValue(sinceDate) : 0;
+  for(const a of log){
+    // war-start filter: skip attacks before the declared war date
+    if(sinceV && warDateValue(a.date) && warDateValue(a.date) < sinceV) continue;
+    // only count attacks between my KD and the enemy KD (this war)
+    const involvesUs = a.atkLoc===myLoc || a.defLoc===myLoc;
+    const involvesEnemy = a.atkLoc===enemyLoc || a.defLoc===enemyLoc;
+    if(!involvesUs || !involvesEnemy) continue;
+    const side = (a.atkLoc===myLoc) ? ours : theirs;
+    side.attacks++;
+    if(side[a.type]!=null) side[a.type]++;
+    if(a.unit==="acres") side.land+=a.amount;
+    if(a.unit==="killed"||a.type==="massacre") side.killed+=a.amount;
+  }
+  return {ours, theirs};
+}
 function killStats(e){
   let attacks=0,breaks=0,masses=0,land=0,peas=0,thieves=0,wiz=0,popDestroy=0;
   const war=e.warMode==="in";
@@ -1474,6 +1549,39 @@ function killStats(e){
     }
   });
   return {attacks,breaks,masses,land:Math.round(land),peas:Math.round(peas),thieves:Math.round(thieves),wiz:Math.round(wiz),popDestroy:Math.round(popDestroy)};
+}
+// REAL war scoreboard from the parsed news attack log
+function warScoreboard(e){
+  if(!e) return "";
+  STATE.warStartDate = STATE.warStartDate || "";
+  const mode = window.__warMode || "war";
+  const sinceDate = (mode==="war") ? STATE.warStartDate : "";
+  const st=warLogStats(e.loc, sinceDate);
+  const o=st.ours, t=st.theirs;
+  const total=(o.attacks+t.attacks);
+  if(total===0){
+    return `<div class="panel" style="margin-bottom:16px"><div class="panel-h"><h3>\u2694\ufe0f War Log</h3><span class="cnt">vs ${esc(e.name)} (${e.loc})</span></div><div class="note" style="padding:14px">No attacks recorded yet. As news syncs from the game, real attacks between your KD and ${esc(e.name)} will appear here automatically.</div></div>`;
+  }
+  const row=(lbl,a,b,clrA,clrB)=>`<tr><td style="padding:6px 10px;color:var(--txt2)">${lbl}</td><td style="padding:6px 10px;text-align:right;font-weight:600;color:${clrA||'var(--head)'}">${a}</td><td style="padding:6px 10px;text-align:right;font-weight:600;color:${clrB||'var(--head)'}">${b}</td></tr>`;
+  const f=v=>fmtK?fmtK(v):v.toLocaleString();
+  return `<div class="panel" style="margin-bottom:16px">
+    <div class="panel-h"><h3>\u2694\ufe0f War Log \u2014 real attacks</h3><span class="cnt">vs ${esc(e.name)} (${e.loc})</span></div>\n    <div style="display:flex;gap:8px;align-items:center;padding:10px 14px;flex-wrap:wrap"><button class="btn ${mode==='war'?'gold':'ghost'} sm" data-act="wlmode:war">War only</button><button class="btn ${mode==='all'?'gold':'ghost'} sm" data-act="wlmode:all">All time</button><span class="note" style="margin-left:6px">War start:</span><input type="text" id="warStartInput" value="${esc(STATE.warStartDate||'')}" placeholder="January 1 of YR7" style="flex:1;min-width:130px"><button class="btn ghost sm" data-act="setwarstart">Set</button></div>
+    <table style="width:100%;border-collapse:collapse;font-size:14px">
+      <thead><tr><th style="text-align:left;padding:6px 10px;color:var(--txt2)"></th><th style="text-align:right;padding:6px 10px;color:var(--green2)">\ud83d\udee1 Us</th><th style="text-align:right;padding:6px 10px;color:var(--red2)">\ud83c\udfaf Them</th></tr></thead>
+      <tbody>
+        ${row("Total attacks",o.attacks,t.attacks)}
+        ${row("Traditional March",o.traditional||0,t.traditional||0)}
+        ${row("Razes",o.raze,t.raze)}
+        ${row("Conquests",o.conquest,t.conquest)}
+        ${row("Plunders",o.plunder,t.plunder)}
+        ${row("Massacres",o.massacre,t.massacre,"var(--red2)","var(--red2)")}
+        ${row("Ambushes",o.ambush,t.ambush)}
+        ${row("Land taken (A)",f(o.land),f(t.land),"var(--green2)","var(--red2)")}
+        ${o.killed||t.killed?row("Killed (massacre)",f(o.killed),f(t.killed),"var(--red2)","var(--red2)"):""}
+      </tbody>
+    </table>
+    <div class="note" style="padding:10px 14px">Live from kingdom news. Net land: <b style="color:${(o.land-t.land)>=0?'var(--green2)':'var(--red2)'}">${(o.land-t.land)>=0?'+':''}${f(o.land-t.land)} A</b></div>
+  </div>`;
 }
 function killCounterPanel(e){
   const k=killStats(e);
@@ -1504,7 +1612,7 @@ function viewGraphs(){
     </div>
     <span class="note">${mode==="totals"?"whole-kingdom comparison":esc(mode==="mine"?STATE.myKd.name:(e?e.name:"—"))}</span>
   </div>`;
-  const kc = e ? killCounterPanel(e) : "";
+  const kc = e ? (warScoreboard(e) + killCounterPanel(e)) : "";
 
   if(mode==="totals"){
     const mine=STATE.myKd.provinces, en=e?e.provinces:[];
@@ -1816,6 +1924,8 @@ document.addEventListener("click",ev=>{
     case "parseintel": applyIntel(); break;
     case "parsenews": parseNews(); break;
     case "graphside": graphSide=arg; render(); break;
+    case "wlmode": window.__warMode=arg; render(); break;
+    case "setwarstart": { const el=document.getElementById("warStartInput"); if(el){ mutate(()=>{ STATE.warStartDate=el.value.trim(); }); toast("War start set: "+(STATE.warStartDate||"(all time)")); } break; }
     case "intelmode": intelMode=arg; render(); break;
     case "savetoserver": saveToServer(); break;
     case "loadfromserver": loadFromServer(); break;
@@ -2442,7 +2552,7 @@ function routeFeedEntry(en){
   const homeLoc=(STATE.myKd&&STATE.myKd.loc)||"";
 
   // 1) NEWS pages
-  if(u.includes("news")){ return parseNewsText(txt)>0; }
+  if(u.includes("news")){ const w=recordWarAttacks(txt); const p=parseNewsText(txt); return (w+p)>0; }
 
   // 2) KINGDOM SUMMARY pages (kingdom_details) -> create/update KD SHELL only, NEVER a province
   if(u.includes("kingdom_details")){
@@ -2928,6 +3038,7 @@ function tickClock(){
   setSaveStatus(storageOK?"saved":"local");
   render();
   setInterval(tickClock,1000); tickClock();
+  setInterval(syncPull,4000); if(STATE.settings.syncUrl) syncPull();
   /* AUTO-SYNC DISABLED - was injecting junk from feed */
   document.addEventListener("dragover",ev=>{ const m=90; if(ev.clientY<m) window.scrollBy(0,-18); else if(window.innerHeight-ev.clientY<m) window.scrollBy(0,18); });
   window.addEventListener&&window.addEventListener("beforeunload",()=>{ try{ save(); }catch(e){} });

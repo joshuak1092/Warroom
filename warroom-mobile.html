@@ -1800,6 +1800,7 @@ function emptyState(icon,title,sub,btns){
 }
 
 /*══════════════ EVENT BINDING ══════════════*/
+if(!window.__fileDel){window.__fileDel=true;document.addEventListener("change",function(ev){var t=ev.target;if(!t||t.tagName!=="INPUT"||t.type!=="file")return;var f=t.files&&t.files[0];if(!f)return;var id=t.id;if(id==="fileMy"){readFile(f,function(x){var ta=document.getElementById("pasteMy");if(ta)ta.value=x;if(typeof doImportMy==="function")doImportMy();});}else if(id==="fileEnemy"){readFile(f,function(x){var ta=document.getElementById("pasteEnemy");if(ta)ta.value=x;if(typeof doImportEnemy==="function")doImportEnemy(false);});}else if(id==="fileJson"){readFile(f,function(x){if(typeof restoreJson==="function")restoreJson(x);});}setTimeout(function(){try{t.value="";}catch(e){}},100);},true);}
 function bindView(){
   // file inputs / dropzones
   function depositCSV(which,txt){
@@ -2501,7 +2502,7 @@ function routeFeedEntry(en){
     if(mn) nm=mn[1].trim(); if(!nm) nm="KD "+loc;
     // your own kingdom: update My Kingdom name, do not add an enemy
     if(homeLoc && loc===homeLoc){
-      if(STATE.myKd){ STATE.myKd.name=nm; STATE.myKd.loc=loc; parseKingdomProvinces(txt, STATE.myKd); STATE.myKd._rev=Date.now(); }
+      if(STATE.myKd){ STATE.myKd.name=nm; STATE.myKd.loc=loc; parseKingdomProvinces(txt, STATE.myKd, true); STATE.myKd._rev=Date.now(); }
       return true;
     }
     STATE.enemies=STATE.enemies||{};
@@ -2525,7 +2526,7 @@ function routeFeedEntry(en){
   if(ml) provLoc=ml[1]+":"+ml[2];
   // own kingdom province?
   if(homeLoc && provLoc===homeLoc){
-    return applyProvinceTo(STATE.myKd, r);
+    return applyProvinceTo(STATE.myKd, r, true);
   }
   // enemy: match KD by the province's location, else active enemy
   let kd=null;
@@ -2535,13 +2536,14 @@ function routeFeedEntry(en){
   return applyProvinceTo(kd, r);
 }
 
+function cleanProvName(n){ return ((n||"")+"").replace(/[~\u00ac`*]+/g,"").replace(/\s*\(\d{1,2}:\d{1,2}\)\s*$/,"").trim(); }
 // write a parsed province (r) into a KD's province list; only real intel creates a province
-function applyProvinceTo(kd, r){
+function applyProvinceTo(kd, r, updateOnly){
   if(!kd||!r||!r.name) return false;
   if(!Array.isArray(kd.provinces)) kd.provinces=[];
-  let p=kd.provinces.find(x=>(x.name||"").toLowerCase()===r.name.toLowerCase());
+  r.name=cleanProvName(r.name); let p=kd.provinces.find(x=>cleanProvName(x.name).toLowerCase()===r.name.toLowerCase());
   let created=false;
-  if(!p){ p={id:uid(),name:r.name,race:"",pers:"",land:0,nw:0,honor:0,defense:0,offense:0,tpa:"",wpa:"",mdtpa:"",mdwpa:"",armyOut:false,returnTick:0,incomingLand:0,generalsUsed:0,pop:0,maxpop:0}; kd.provinces.push(p); created=true; }
+  if(!p){ if(updateOnly) return false; p={id:uid(),name:r.name,race:"",pers:"",land:0,nw:0,honor:0,defense:0,offense:0,tpa:"",wpa:"",mdtpa:"",mdwpa:"",armyOut:false,returnTick:0,incomingLand:0,generalsUsed:0,pop:0,maxpop:0}; kd.provinces.push(p); created=true; }
   const f=r.fields;
   const setIf=(k,v)=>{ if(v!=null && v!=="" && !(typeof v==="number"&&isNaN(v))) p[k]=v; };
   setIf("race",f.race); setIf("pers",f.pers); setIf("land",f.land); setIf("nw",f.nw);
@@ -2559,7 +2561,7 @@ function applyProvinceTo(kd, r){
 /* Parse the province table from a kingdom_details page (WoL format).
    Rows: "Slot<TAB>Name<TAB>Race<TAB>Land acres<TAB>NetWorth gc<TAB>NW/Acre<TAB>Nobility".
    Empty slots are "-". Markers like *, (M), (S) are stripped from names. */
-function parseKingdomProvinces(txt, kd){
+function parseKingdomProvinces(txt, kd, updateOnly){
   if(!txt||!kd) return 0;
   kd.provinces=kd.provinces||[];
   const races=["Avian","Dark Elf","Dwarf","Elf","Faery","Halfling","Human","Orc","Undead"];
@@ -2580,7 +2582,7 @@ function parseKingdomProvinces(txt, kd){
     if(!/^\d{1,3}$/.test(cols[0])) continue;
     // empty slot rows are just "N - - - - -"
     if(cols.slice(1).every(c=>c==="-")) continue;
-    let name=(cols[1]||"").replace(/\*/g,"").replace(/\((?:M|S)\)/g,"").trim();
+    let name=(cols[1]||"").replace(/\*/g,"").replace(/\((?:M|S)\)/g,"").replace(/\s+/g," ").trim();
     if(!name||name==="-") continue;
     // find race among the remaining columns
     let race=""; for(const c of cols){ for(const r of races){ if(c.toLowerCase()===r.toLowerCase()){ race=r; break; } } if(race) break; }
@@ -2591,8 +2593,9 @@ function parseKingdomProvinces(txt, kd){
     // net worth = first "N gc"
     let nw=0; const nwm=line.match(/([\d,]+)\s*gc/i); if(nwm) nw=parseInt(nwm[1].replace(/,/g,""))||0;
     // upsert by name
-    let p=kd.provinces.find(x=>(x.name||"").toLowerCase()===name.toLowerCase());
-    if(!p){ p={id:uid(),name:name,race:"",pers:"",land:0,nw:0,honor:0,defense:0,offense:0,tpa:"",wpa:"",mdtpa:"",mdwpa:"",armyOut:false,returnTick:0,incomingLand:0,generalsUsed:0,pop:0,maxpop:0}; kd.provinces.push(p); added++; }
+    const _norm=s=>(s||"").toLowerCase().replace(/\s+/g," ").trim();
+    let p=kd.provinces.find(x=>_norm(x.name)===_norm(name));
+    if(!p){ if(updateOnly) continue; p={id:uid(),name:name,race:"",pers:"",land:0,nw:0,honor:0,defense:0,offense:0,tpa:"",wpa:"",mdtpa:"",mdwpa:"",armyOut:false,returnTick:0,incomingLand:0,generalsUsed:0,pop:0,maxpop:0}; kd.provinces.push(p); added++; }
     if(race) p.race=race;
     if(land) p.land=land;
     if(nw) p.nw=nw;
