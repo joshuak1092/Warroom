@@ -36,3 +36,17 @@ discord-bot.js
 # Bot files - token+key, never commit
 bot-launch.js
 discord-bot.js
+
+# bot-build secrets and live data
+bot-build/.env
+bot-build/node_modules/
+bot-build/links.json
+bot-build/armies.json
+bot-build/seen.json
+bot-build/bot.js.bak*
+bot-build/feed-attacks.js
+bot-build/checkthrone.js
+bot-build/checkrulers.js
+bot-build/inspect.js
+bot-build/inspect2.js
+bot-build/SPEC.md

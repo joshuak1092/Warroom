@@ -3,13 +3,13 @@
 const http=require("http"), fs=require("fs"), qs=require("querystring"), path=require("path");
 const PORT=process.env.PORT||process.argv[2]||8108, KEY=process.env.INTEL_KEY||process.argv[3]||"", SITEPASS=process.argv[4]||"";
 const LOG="intel-log.json", STATE_FILE="state.json", BACKUP_DIR="state-backups";
-const SERVER_VERSION="2.0-safe-"+new Date().toISOString().slice(0,10);
+const SERVER_VERSION="2.4-nosync-"+new Date().toISOString().slice(0,10);
 if(!fs.existsSync(BACKUP_DIR)){ try{ fs.mkdirSync(BACKUP_DIR); }catch(e){} }
 function readState(){ try{ return JSON.parse(fs.readFileSync(STATE_FILE,"utf8")); }catch(e){ return {myKd:{name:"",loc:"",provinces:[]},enemies:{},activeEnemy:null,settings:{}}; } }
 function backupState(){ try{ if(!fs.existsSync(STATE_FILE)) return; const stamp=new Date().toISOString().replace(/[:.]/g,"-"); fs.copyFileSync(STATE_FILE, path.join(BACKUP_DIR,"state-"+stamp+".json")); const files=fs.readdirSync(BACKUP_DIR).filter(f=>f.startsWith("state-")).sort(); while(files.length>10){ try{ fs.unlinkSync(path.join(BACKUP_DIR,files.shift())); }catch(e){} } }catch(e){} }
 function cleanName(n){ return ((n||"")+"").replace(/[~¬`*]+/g,"").replace(/\s*\(\d{1,2}:\d{1,2}\)\s*$/,"").trim(); }
 function dedupeProvs(provs){ if(!Array.isArray(provs)) return []; const by={}; const out=[]; for(const p of provs){ const nm=cleanName(p&&p.name); if(!nm) continue; const k=nm.toLowerCase(); if(by[k]){ const keep=by[k]; for(const f in p){ if(p[f]!=null && p[f]!=="" && p[f]!==0) keep[f]=p[f]; } } else { p.name=nm; by[k]=p; out.push(p); } } return out; }
-function sanitizeState(inc){ const homeLoc=((inc.myKd&&inc.myKd.loc)||"").trim(); if(inc.myKd) inc.myKd.provinces=dedupeProvs(inc.myKd.provinces); if(inc.enemies && typeof inc.enemies==="object"){ for(const id in inc.enemies){ const e=inc.enemies[id]; if(!e){ delete inc.enemies[id]; continue; } e.provinces=dedupeProvs(e.provinces); if(homeLoc && (e.loc||"")===homeLoc){ if(!inc.myKd) inc.myKd={name:e.name||"",loc:homeLoc,provinces:[]}; inc.myKd.provinces=dedupeProvs((inc.myKd.provinces||[]).concat(e.provinces||[])); delete inc.enemies[id]; } } } return inc; }
+function sanitizeState(inc){ const homeLoc=((inc.myKd&&inc.myKd.loc)||"").trim(); if(inc.myKd) inc.myKd.provinces=dedupeProvs(inc.myKd.provinces); if(inc.enemies && typeof inc.enemies==="object"){ for(const id in inc.enemies){ const e=inc.enemies[id]; if(!e){ delete inc.enemies[id]; continue; } e.provinces=dedupeProvs(e.provinces); /* home-fold KILLED: server never folds enemy provs into myKd */ } } return inc; }
 function writeState(obj){ backupState(); const tmp=STATE_FILE+".tmp"; fs.writeFileSync(tmp, JSON.stringify(obj)); fs.renameSync(tmp, STATE_FILE); }
 let entries=[]; let nextId=1;
 try{ entries=JSON.parse(fs.readFileSync(LOG,"utf8")); nextId=(entries[entries.length-1]?.id||0)+1; }catch(e){}
@@ -40,6 +40,27 @@ http.createServer((req,res)=>{
         if(!("myKd" in inc)&&!("enemies" in inc)){ res.writeHead(400,{"Content-Type":"application/json"}); return res.end('{"error":"missing myKd/enemies"}'); }
         const myN=(inc.myKd&&inc.myKd.provinces||[]).length, enN=Object.keys(inc.enemies||{}).length;
         if(myN===0 && enN===0 && u.searchParams.get("force")!=="1"){ res.writeHead(409,{"Content-Type":"application/json"}); return res.end('{"error":"empty save blocked — add ?force=1 to wipe on purpose"}'); }
+        // VALIDATION GUARD: block saving scattered/junk KD data
+        if(u.searchParams.get("force")!=="1" && inc.myKd){
+          const provs=inc.myKd.provinces||[];
+          const kdName=(inc.myKd.name||"").toLowerCase().trim();
+          const problems=[];
+          if(provs.length>25) problems.push("myKd has "+provs.length+" provinces (max 25 — looks scattered)");
+          const names=provs.map(p=>(p.name||"").trim());
+          const junkTilde=names.filter(n=>/[~`*\u00ac]/.test(n));
+          if(junkTilde.length) problems.push("junk/tilde provinces: "+junkTilde.slice(0,5).join(", "));
+          const nameAsProv=names.filter(n=>n.toLowerCase()===kdName && kdName);
+          if(nameAsProv.length) problems.push("KD name appears as a province: "+nameAsProv.join(", "));
+          const seen={}, dupes=[];
+          names.forEach(n=>{ const k=n.toLowerCase(); if(k){ if(seen[k]) dupes.push(n); seen[k]=1; } });
+          if(dupes.length) problems.push("duplicate provinces: "+[...new Set(dupes)].slice(0,5).join(", "));
+          const loc=(inc.myKd.loc||"").trim();
+          if(loc && !/^\d{1,2}:\d{1,2}$/.test(loc)) problems.push("myKd location malformed: '"+loc+"'");
+          if(problems.length){
+            res.writeHead(422,{"Content-Type":"application/json"});
+            return res.end(JSON.stringify({error:"save blocked — data failed validation", problems:problems, hint:"fix the data, or add ?force=1 to override"}));
+          }
+        }
         inc=sanitizeState(inc); writeState(inc); lastSaveTime=new Date().toISOString(); broadcast("state");
         res.writeHead(200,{"Content-Type":"application/json"});
         return res.end(JSON.stringify({success:true,saved:true,myprovs:(inc.myKd&&inc.myKd.provinces||[]).length,enemies:Object.keys(inc.enemies||{}).length}));
@@ -72,9 +93,10 @@ http.createServer((req,res)=>{
   }
   if(u.pathname==="/feed"){
     if(!authRead(u.searchParams.get("key")||"")){ res.writeHead(403,{"Content-Type":"application/json"}); return res.end(JSON.stringify({error:"bad key"})); }
-    const since=parseInt(u.searchParams.get("since")||"0",10)||0; const out=entries.filter(e=>e.id>since).slice(0,200);
+    const since=parseInt(u.searchParams.get("since")||"0",10)||0; const out=entries.filter(e=>e.id>since).slice(-200);
     res.writeHead(200,{"Content-Type":"application/json"}); return res.end(JSON.stringify({cursor: out.length?out[out.length-1].id:since, entries: out}));
   }
+  if(req.method==="GET" && u.pathname==="/version"){ res.writeHead(200,{"Content-Type":"text/plain","Cache-Control":"no-cache, no-store, must-revalidate"}); return res.end(SERVER_VERSION); }
   const pages={"/":"warroom.html","/index.html":"warroom.html","/mobile":"warroom-mobile.html","/mobile.html":"warroom-mobile.html"};
   if(req.method==="GET" && pages[u.pathname]){
     const ADMINPASS=process.env.WARROOM_ADMIN_PASS||SITEPASS||"", VIEWPASS=process.env.WARROOM_VIEW_PASS||"";
@@ -83,8 +105,8 @@ http.createServer((req,res)=>{
       if(ADMINPASS && pass===ADMINPASS) role="admin"; else if(VIEWPASS && pass===VIEWPASS) role="viewer";
       else { res.writeHead(401,{"WWW-Authenticate":'Basic realm="War Room"'}); return res.end("Passcode required"); } }
     try{ let f=fs.readFileSync(pages[u.pathname],"utf8"); const synckey=(role==="admin")?KEY:READKEY;
-      f=f.replace("<body>", '<body>\n<script>window.__WR_ROLE='+JSON.stringify(role)+';window.__WR_VERSION='+JSON.stringify(SERVER_VERSION)+';window.__WR_SYNC={url:"",syncUrl:"",key:'+JSON.stringify(synckey||"")+',syncKey:'+JSON.stringify(synckey||"")+'};</script>');
-      res.writeHead(200,{"Content-Type":"text/html; charset=utf-8"}); return res.end(f);
+      f=f.replace("<body>", '<body>\n<script>window.__WR_ROLE='+JSON.stringify(role)+';window.__WR_VERSION='+JSON.stringify(SERVER_VERSION)+';window.__WR_SYNC={url:"",syncUrl:"",key:'+JSON.stringify(synckey||"")+',syncKey:'+JSON.stringify(synckey||"")+'};(function(){var v='+JSON.stringify(SERVER_VERSION)+';setInterval(function(){fetch("/version",{cache:"no-store"}).then(function(r){return r.text();}).then(function(sv){if(sv&&sv.trim()&&sv.trim()!==v){console.log("New version detected, reloading...");location.reload(true);}}).catch(function(){});},20000);})();</script>');
+      res.writeHead(200,{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-cache, no-store, must-revalidate","Pragma":"no-cache","Expires":"0"}); return res.end(f);
     }catch(e){ res.writeHead(404); return res.end("Put warroom.html next to intel-server.js"); }
   }
   res.writeHead(200,{"Content-Type":"application/json"});

@@ -2301,7 +2301,7 @@ function doImportMy(){
   if(!txt){ toast("Paste or drop your kingdom CSV first."); return; }
   const {objs}=rowsToObjects(txt);
   if(!objs.length){ toast("Couldn't find any rows. Make sure the first line is a header with a 'province' column."); return; }
-  const provs=objs.map(o=>({id:uid(),name:o.name||"Unnamed",race:o.race||"",pers:o.pers||"",
+  const provs=objs.map(o=>({id:uid(),name:o.name||"Unnamed",ruler:o.ruler||"",race:o.race||"",pers:o.pers||"",
     land:num(o.land),nw:num(o.nw),offense:num(o.offense),defense:num(o.defense),
     generals:Math.max(1,Math.min(MAX_GENERALS,(o.generals!==undefined&&o.generals!==""?num(o.generals):(STATE.settings.defGenerals+((o.pers||"").toLowerCase()==="general"?1:0))))),
     fana:parseBool(o.fana),bl:parseBool(o.bl),fanaOn:false,blOn:false,sci:grabSci(o)}));
@@ -2315,7 +2315,7 @@ function grabSci(o){ const s={}; let any=false; SCI_KEYS.forEach(k=>{ if(o[k]!==
 const COLMAP={army:"army",allarmies:"allArmies",off:"off",def:"def",offhome:"offHome",defhome:"defHome",somdef:"somDef",osoff:"osOff",dsdef:"dsDef",ome:"ome",dme:"dme",opa:"opa",dpa:"dpa",os:"os",ds:"ds",leets:"leets",horses:"horses",solds:"solds",military:"military",ostrain:"osTrain",dstrain:"dsTrain",elitetrain:"eliteTrain",prisoners:"prisoners",thv:"thieves",wiz:"wizards",rtpa:"rtpa",otpa:"otpa",dtpa:"dtpa",rwpa:"rwpa",owpa:"owpa",dwpa:"dwpa",thieftrain:"thiefTrain",be:"be",home:"bHome",farm:"bFarm",mill:"bMill",bank:"bBank",tgs:"bTGs",arms:"bArms",rax:"bRax",fort:"bFort",cast:"bCast",hosp:"bHosp",guil:"bGuil",towe:"bTowe",tds:"bTDs",wts:"bWTs",univ:"bUniv",libs:"bLibs",stab:"bStab",dung:"bDung",barr:"bBarr",sur:"survAcres",stocked:"stocked",allocated:"allocated",alche:"sAlche",tools:"sTools",housi:"sHousi",produ:"sProdu",bookk:"sBookk",artis:"sArtis",strat:"sStrat",siege:"sSiege",tacti:"sTacti",valor:"sValor",heroi:"sHeroi",resil:"sResil",crime:"sCrime",chann:"sChann",shiel:"sShiel",cunni:"sCunni",sorce:"sSorce",fines:"sFines",gcs:"gcs",gcpa:"gcpa",food:"food",runes:"runes",tb:"tb",peons:"peons",ppa:"ppa",nonpeon:"nonpeon",sos:"sos",infil:"infil",som:"som",intelage:"intelAge",nwpa:"nwpa",poppct:"poppct"};
 function buildFullIntel(o){ const intel={}; if(o.__raw && o.__headers){ o.__headers.forEach((nh,i)=>{ if(COLMAP[nh]){ const v=o.__raw[i]; if(v!==undefined&&String(v).trim()!=="") intel[COLMAP[nh]]=num(v); } }); const mi=o.__headers.indexOf("map"); if(mi>=0&&o.__raw[mi]) intel.map=String(o.__raw[mi]).trim(); } return intel; }
 function buildEnemyProvs(objs){
-  return objs.map(o=>({intel:buildFullIntel(o),id:uid(),name:o.name||"Unnamed",race:o.race||"",pers:o.pers||"",combo:o.combo||"",
+  return objs.map(o=>({intel:buildFullIntel(o),id:uid(),name:o.name||"Unnamed",ruler:o.ruler||"",race:o.race||"",pers:o.pers||"",combo:o.combo||"",
     land:num(o.land),nw:num(o.nw),honor:num(o.honor),
     offense:num(o.offense)||num(o.offhome),defense:num(o.defense)||num(o.defhome),
     offHome:num(o.offhome),defHome:num(o.defhome),somDef:num(o.somdef),ome:num(o.ome),dme:num(o.dme),army:num(o.army),allArmies:num(o.allarmies),
@@ -2340,14 +2340,10 @@ function doImportEnemy(merge){
     mutate(()=>{
       for(const key in byKd){
         const realLoc=key==="_none"?"":key;
-        if(homeLoc && realLoc===homeLoc){
-          if(!STATE.myKd.provinces) STATE.myKd.provinces=[];
-          buildEnemyProvs(byKd[key]).forEach(np=>{ const ex=STATE.myKd.provinces.find(p=>(p.name||"").toLowerCase()===np.name.toLowerCase());
-            if(ex){ Object.assign(ex,{...np,id:ex.id}); homeCount++; } /* only update existing; do NOT add new provs to my KD */ });
-          STATE.myKd._rev=Date.now(); continue;
-        }
+        // HOME-FOLD REMOVED: enemy imports never touch myKd.
         let kd=realLoc?Object.values(STATE.enemies).find(e=>(e.loc||"")===realLoc):null;
         if(!kd){ const nid=uid(); kd={id:nid,name:"KD "+(realLoc||"?"),loc:realLoc,status:"available",warMode:"out",eowcfExit:"",note:"",wave:[],provinces:[],_rev:Date.now()}; STATE.enemies[nid]=kd; }
+        else { const csvNm=(byKd[key][0]&&(byKd[key][0].kdname||byKd[key][0].kingdom))||""; if(csvNm && csvNm!==kd.name) kd.name=csvNm; }
         buildEnemyProvs(byKd[key]).forEach(np=>{ const ex=kd.provinces.find(p=>(p.name||"").toLowerCase()===np.name.toLowerCase());
           if(ex) Object.assign(ex,{...np,id:ex.id}); else kd.provinces.push(np); provCount++; });
         kd._rev=Date.now(); lastId=kd.id;
