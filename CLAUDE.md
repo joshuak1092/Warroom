@@ -76,9 +76,13 @@ incidents; do not remove them casually:
 - `/restore` has the same anti-wipe guard.
 - `sanitizeState()` dedupes provinces; the server **never** folds enemy provinces into our KD.
 
-> ⚠️ **KNOWN BUG to investigate before touching save/wipe logic:** `POST /save` with a *valid admin
-> key* returned **409 on a near-empty state** — most likely one of the anti-wipe guards above firing.
-> Confirm which guard and why before building new save logic or wiping data.
+> ✅ **RESOLVED (2026-06-29):** the old "409 on a near-empty state" was **not a bug** — it's the
+> empty-save guard (0 provs AND 0 enemies → 409) working as designed. Reproduced and confirmed. The
+> firewalls are correct; use `?force=1` for an intentional wipe.
+
+**`/feed` is gzipped** when the client sends `Accept-Encoding: gzip` (~555 KB → ~93 KB). Browsers get
+this transparently; the bot requests and gunzips it explicitly. Oversized POST (>5 MB) → `413`;
+unknown GET paths → `404`.
 
 ## Browser apps — `warroom.html` (desktop) & `warroom-mobile.html` (mobile)
 

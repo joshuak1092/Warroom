@@ -49,8 +49,10 @@ http.createServer((req,res)=>{
     return res.end(JSON.stringify({ok:true,version:SERVER_VERSION,myKd:(d.myKd&&d.myKd.name)||"",myLoc:(d.myKd&&d.myKd.loc)||"",myprovs:(d.myKd&&d.myKd.provinces||[]).length,enemies:Object.keys(d.enemies||{}).length,enemyKDs:Object.values(d.enemies||{}).map(e=>({name:e.name,loc:e.loc,provs:(e.provinces||[]).length})),lastSave:lastSaveTime,backups},null,2));
   }
   if(req.method==="POST"){
-    let body=""; req.on("data",c=>{ body+=c; if(body.length>5e6) req.destroy(); });
+    let body="", tooBig=false;
+    req.on("data",c=>{ if(tooBig) return; body+=c; if(body.length>5e6){ tooBig=true; try{ res.writeHead(413,{"Content-Type":"application/json"}); res.end('{"error":"payload too large (max 5MB)"}'); }catch(e){} req.destroy(); } });
     req.on("end",()=>{
+      if(tooBig) return;
       let p={}; try{ p=body.trim().startsWith("{")?JSON.parse(body):qs.parse(body); }catch(e){}
       if(KEY && (p.key||"")!==KEY && !((p.key||"")===WIKI_PW && u.pathname==="/wiki/save")){ res.writeHead(403,{"Content-Type":"application/json"}); return res.end(JSON.stringify({success:false,error:"bad key"})); }
       if(u.pathname==="/save"){
@@ -128,7 +130,14 @@ http.createServer((req,res)=>{
   if(u.pathname==="/feed"){
     if(!authRead(u.searchParams.get("key")||"")){ res.writeHead(403,{"Content-Type":"application/json"}); return res.end(JSON.stringify({error:"bad key"})); }
     const since=parseInt(u.searchParams.get("since")||"0",10)||0; const out=entries.filter(e=>e.id>since && String(e.url||"").indexOf("/wol/")>=0).slice(-200);
-    res.writeHead(200,{"Content-Type":"application/json"}); return res.end(JSON.stringify({cursor: out.length?out[out.length-1].id:since, entries: out}));
+    const payload=JSON.stringify({cursor: out.length?out[out.length-1].id:since, entries: out});
+    if(/\bgzip\b/.test(String(req.headers["accept-encoding"]||""))){
+      return require("zlib").gzip(payload,(err,buf)=>{
+        if(err){ res.writeHead(200,{"Content-Type":"application/json"}); return res.end(payload); }
+        res.writeHead(200,{"Content-Type":"application/json","Content-Encoding":"gzip","Vary":"Accept-Encoding"}); res.end(buf);
+      });
+    }
+    res.writeHead(200,{"Content-Type":"application/json"}); return res.end(payload);
   }
   if(req.method==="GET" && u.pathname==="/version"){ res.writeHead(200,{"Content-Type":"text/plain","Cache-Control":"no-cache, no-store, must-revalidate"}); return res.end(SERVER_VERSION); }
   if(req.method==="GET" && u.pathname==="/wiki"){
@@ -155,6 +164,6 @@ http.createServer((req,res)=>{
       res.writeHead(200,{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-cache, no-store, must-revalidate","Pragma":"no-cache","Expires":"0"}); return res.end(f);
     }catch(e){ res.writeHead(404); return res.end("Put warroom.html next to intel-server.js"); }
   }
-  res.writeHead(200,{"Content-Type":"application/json"});
-  res.end(JSON.stringify({ok:true, name:"warroom-intel-server", version:SERVER_VERSION, entries:entries.length}));
+  res.writeHead(404,{"Content-Type":"application/json"});
+  res.end(JSON.stringify({ok:false, error:"not found", name:"warroom-intel-server", version:SERVER_VERSION, entries:entries.length}));
 }).listen(PORT,()=>console.log("War Room SAFE server "+SERVER_VERSION+" on http://0.0.0.0:"+PORT+(KEY?"  key required":"  ⚠ no key set")));

@@ -130,11 +130,15 @@ const BASE = 'http://localhost:8108';
 const parser = makeNewsParser();
 let cursor = 0;
 
+const zlib = require('zlib');
 function httpGet(path) {
   return new Promise((resolve) => {
-    http.get(BASE + path, (res) => {
-      let d = ''; res.on('data', c => d += c);
-      res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { resolve(null); } });
+    http.get(BASE + path, { headers: { 'Accept-Encoding': 'gzip' } }, (res) => {
+      const chunks = [];
+      const src = (String(res.headers['content-encoding']||'').indexOf('gzip')>=0) ? res.pipe(zlib.createGunzip()) : res;
+      src.on('data', c => chunks.push(c));
+      src.on('end', () => { try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))); } catch(e) { resolve(null); } });
+      src.on('error', () => resolve(null));
     }).on('error', () => resolve(null));
   });
 }
@@ -621,15 +625,7 @@ function plogClassify(prov, date, text){
   return null;
 }
 function plogFetchFeed(){
-  return new Promise(function(resolve){
-    try{
-      require('http').get('http://localhost:8108/feed?key='+KEY+'&since=0', function(r){
-        var d=''; r.on('data',function(c){d+=c;}); r.on('end',function(){
-          try{ var j=JSON.parse(d); resolve(j.entries||(Array.isArray(j)?j:[])); }catch(e){ resolve([]); }
-        });
-      }).on('error',function(){ resolve([]); });
-    }catch(e){ resolve([]); }
-  });
+  return httpGet('/feed?key='+KEY+'&since=0').then(function(j){ return j ? (j.entries||(Array.isArray(j)?j:[])) : []; });
 }
 async function pollProvinceLogs(ch, _feed){
   var entries=_feed||await plogFetchFeed();
@@ -770,13 +766,7 @@ function vpAttackAll(prov, txt, url, maxYR){
   return out;
 }
 function vpFetchFeed(){
-  return new Promise(function(resolve){
-    require('http').get('http://localhost:8108/feed?key='+KEY+'&since=0', function(r){
-      var d=''; r.on('data',function(c){d+=c;}); r.on('end',function(){
-        try{ var j=JSON.parse(d); resolve(j.entries||(Array.isArray(j)?j:[])); }catch(e){ resolve([]); }
-      });
-    }).on('error', function(){ resolve([]); });
-  });
+  return httpGet('/feed?key='+KEY+'&since=0').then(function(j){ return j ? (j.entries||(Array.isArray(j)?j:[])) : []; });
 }
 async function pollVisitedPages(ch, _feed){
   var entries = _feed || await vpFetchFeed();
@@ -813,8 +803,18 @@ async function pollVisitedPages(ch, _feed){
     fresh=fresh.filter(function(c){ if(c.kind!=='op') return true; if(keepOps.indexOf(c)>=0) return true; markSeen(c.sig); return false; });
   }
   for(var i=0;i<fresh.length;i++){
-    try{ await (chFor(fresh[i].kind)||ch).send(fresh[i].msg); markSeen(fresh[i].sig); }
-    catch(err){ console.error('vp:', err.message); }
+    var tgt = chFor(fresh[i].kind)||ch;
+    try{ await tgt.send(fresh[i].msg); markSeen(fresh[i].sig); }
+    catch(err){
+      var permErr = (err&&err.code===50013) || /Missing Permissions/i.test((err&&err.message)||'');
+      if(permErr){
+        // Bot can see but not Send in this channel. Don't retry forever: warn once, fall back to default, then drop.
+        var nm = (tgt&&tgt.name)||'?';
+        if(!vpPermWarned.has(nm)){ console.error('vp: no Send permission in #'+nm+' (kind='+fresh[i].kind+') — grant the bot "Send Messages" there; falling back to default channel'); vpPermWarned.add(nm); }
+        if(ch && ch!==tgt){ try{ await ch.send(fresh[i].msg); }catch(e2){} }
+        markSeen(fresh[i].sig);
+      } else { console.error('vp:', err.message); }
+    }
   }
 }
 
@@ -829,7 +829,7 @@ async function pollWarAttacks(ch){ const wl=readWarlogEv(); const sigs=Object.ke
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
-let CH = {}; let chDefault = null;
+let CH = {}; let chDefault = null; const vpPermWarned = new Set();
 function chFor(kind){ if(kind==='op') return CH.ops||chDefault; if(kind==='ritual') return CH.ritual||chDefault; if(kind==='aid') return CH.aid||chDefault; if(kind==='spell') return CH.selfspells||chDefault; if(kind==='atk'||kind==='attack'||kind==='ceasefire') return CH.attacks||chDefault; return chDefault; }
 client.once('clientReady', async () => {
   console.log('BOT online as ' + client.user.tag);
