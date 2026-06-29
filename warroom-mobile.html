@@ -20,6 +20,13 @@
   --r:14px; --r2:10px;
   --sh:0 1px 2px rgba(0,0,0,.5), 0 8px 24px -10px rgba(0,0,0,.7);
   --sh2:0 2px 8px rgba(0,0,0,.6), 0 18px 44px -16px rgba(0,0,0,.8);
+  /* ── mobile density knobs (drive MOBILE-FIRST OVERRIDES; one source of truth) ── */
+  --d-font:15px;   /* base body / control font */
+  --d-pad:12px;    /* view + topbar inner padding */
+  --d-gap:8px;     /* grid / sumbar gaps */
+  --d-row:11px;    /* list row vertical padding */
+  --d-radius:10px; /* override-block corner radius */
+  --d-tap:34px;    /* min interactive height — keep >=32px */
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
@@ -442,12 +449,12 @@ details.panel[open] summary::after{content:"▾"}
 
 /* ════════ MOBILE-FIRST OVERRIDES (dedicated mobile build) ════════ */
 html{-webkit-text-size-adjust:100%}
-body{font-size:15px}
+body{font-size:var(--d-font)}
 #side{display:none!important}
 .botnav{display:flex!important}
 #main{padding-bottom:0}
-.view{padding:14px 12px 110px!important}
-.topbar{padding:12px 14px!important;flex-wrap:wrap}
+.view{padding:calc(var(--d-pad) + 2px) var(--d-pad) 110px!important}
+.topbar{padding:var(--d-pad) calc(var(--d-pad) + 2px)!important;flex-wrap:wrap}
 .topbar h2{font-size:19px!important}
 .topbar .sub{display:none!important}
 .clock{display:none!important}
@@ -456,7 +463,7 @@ body{font-size:15px}
 .kdtop select{flex:1;max-width:none;font-size:14px;padding:10px 12px}
 
 /* layout: KD panels stay side-by-side; everything else single column */
-.planner-grid{grid-template-columns:1fr 1fr!important;gap:8px!important}
+.planner-grid{grid-template-columns:1fr 1fr!important;gap:var(--d-gap)!important}
 .planner-grid>.side-col{grid-column:1/-1!important}
 .grid2,.wave-cols,.graph-grid{grid-template-columns:1fr!important}
 .side-col{flex-direction:column!important}
@@ -485,21 +492,21 @@ body{font-size:15px}
 .planner-grid .selhint{font-size:10.5px;padding:7px 8px;flex-wrap:wrap}
 .planner-grid .asg.mini{font-size:9px;padding:2px 5px}
 .planner-grid .opmini{font-size:8.5px}
-.sumbar{grid-template-columns:1fr 1fr!important;gap:8px!important}
+.sumbar{grid-template-columns:1fr 1fr!important;gap:var(--d-gap)!important}
 .sumcell{padding:11px 12px!important}.sumcell .v{font-size:18px!important}
 
 /* bigger touch targets */
 .btn{padding:11px 16px;font-size:13.5px}
 .btn.sm{padding:10px 14px;font-size:13px}
 .btn.xs{padding:9px 13px;font-size:12.5px}
-.lrow{padding:11px 13px}
+.lrow{padding:var(--d-row) calc(var(--d-row) + 2px)}
 .chip{padding:7px 10px;font-size:12px}
-.ministep button{width:30px;height:34px;font-size:16px}
+.ministep button{width:30px;height:var(--d-tap);font-size:16px}
 .ministep b{font-size:13px;min-width:20px}
 .star{font-size:18px;padding:2px 4px}
 .lr-def b{font-size:16px}
 .leftbox b{font-size:16px}
-select,input[type=text],input[type=number],input[type=datetime-local]{font-size:15px;padding:11px 12px}
+select,input[type=text],input[type=number],input[type=datetime-local]{font-size:var(--d-font);padding:11px var(--d-pad)}
 textarea{font-size:13px}
 .qtype{font-size:13px;padding:8px 9px}
 .botnav button{padding:8px 2px}
@@ -525,7 +532,7 @@ thead th{padding:9px 8px}
 tbody td{padding:9px 8px}
 
 
-.opgrid{max-height:260px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--bg3)}
+.opgrid{max-height:260px;overflow-y:auto;border:1px solid var(--line);border-radius:var(--d-radius);padding:var(--d-gap);background:var(--bg3)}
 .opgrp{font-size:10.5px;font-weight:800;text-transform:uppercase;color:var(--txt3);padding:7px 4px 4px}
 .oprow{display:flex;align-items:center;gap:8px;padding:5px 4px;border-radius:7px;cursor:pointer;font-size:13px}
 .oprow:hover{background:var(--bg2)}
@@ -536,6 +543,29 @@ details.cpanel>summary{list-style:none;cursor:pointer}
 details.cpanel>summary::-webkit-details-marker{display:none}
 details.cpanel>summary .panel-h::after{content:"\25b8";color:var(--txt3);margin-left:auto;padding-left:8px}
 details.cpanel[open]>summary .panel-h::after{content:"\25be"}
+#mbox .sumbar{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}#mbox .sumcell{flex:1 1 70px;min-width:70px;background:rgba(255,255,255,.04);border-radius:6px;padding:5px 7px;text-align:center}#mbox .sumcell .k{font-size:10px;opacity:.6;line-height:1.25}#mbox .sumcell .v{font-weight:700;font-size:13px}#mbox .note{font-size:11px;opacity:.6;margin-top:8px;line-height:1.4}#mbox table{width:100%;border-collapse:collapse;margin:3px 0;font-size:11.5px}#mbox thead th{text-align:right;font-size:9.5px;opacity:.55;font-weight:600;padding:2px 4px;white-space:nowrap}#mbox th.l,#mbox td.l{text-align:left}#mbox tbody td{text-align:right;padding:3px 4px;border-top:1px solid rgba(255,255,255,.06);white-space:nowrap}#mbox tbody td.l{white-space:normal}#mbox .empty{opacity:.6;font-size:12px;padding:8px 0;line-height:1.4}.chip.pd-btn{cursor:pointer}
+/* ===== full-CSV per-province intel card (ported from desktop) ===== */
+.itabs{display:flex;overflow-x:auto;border:1px solid var(--line2);border-radius:9px;background:var(--surface);margin:6px 0 12px;-webkit-overflow-scrolling:touch}
+.itabs button{flex:none;background:none;border:none;color:var(--txt2);padding:9px 13px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;white-space:nowrap;border-bottom:2px solid transparent}
+.itabs button:hover{color:var(--txt)}
+.itabs button.on{color:var(--head);border-bottom-color:var(--amber)}
+.igrid{padding:2px}
+.irow{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:7px 2px;border-bottom:1px solid var(--bg3)}
+.ik{color:var(--txt2);font-size:12.5px}
+.iv{font-weight:600;font-variant-numeric:tabular-nums;text-align:right;color:var(--txt);font-family:'JetBrains Mono',monospace;font-size:12.5px}
+.iv.iempty{color:var(--txt3);font-weight:400}
+.ipa{color:var(--amber);font-weight:700;font-size:11px;margin-left:7px}
+.ipct{color:var(--teal2);font-weight:700;font-size:11px;margin-left:7px}
+.icols{columns:2;column-gap:22px}
+.icols .irow{break-inside:avoid}
+.isurb{display:flex;justify-content:space-between;padding:0 2px 9px;margin-bottom:6px;border-bottom:1px solid var(--line2)}
+.iinprog{display:flex;justify-content:space-between;align-items:center;background:rgba(224,165,46,.12);border:1px solid rgba(224,165,46,.4);border-radius:9px;padding:10px 12px;margin:9px 0 5px}
+.iinprog .l{color:var(--amber);font-weight:700;font-size:12.5px}
+.iinprog .r{color:var(--amber);font-weight:700;font-variant-numeric:tabular-nums;font-family:'JetBrains Mono',monospace}
+.ibsum{display:flex;justify-content:space-between;padding:9px 2px 2px;font-size:11.5px;color:var(--txt2)}
+.inote{width:100%;min-height:130px;background:var(--bg2);color:var(--txt);border:1px solid var(--line2);border-radius:8px;padding:10px;font-family:inherit;font-size:13px;line-height:1.5;resize:vertical}
+.inote:focus{outline:none;border-color:var(--amber)}
+@media(max-width:560px){.icols{columns:1}}
 </style>
 </head>
 <body>
@@ -681,7 +711,7 @@ function scrubProvinces(kd){
   const seen={}; const keep=[];
   for(const p of kd.provinces){
     let nm=cleanProvName(p.name||"");
-    if(!nm || /[%\d]/.test(nm) || nm.length<2){ continue; }
+    if(!nm || /%/.test(nm) || /^[\d.,\s]+$/.test(nm) || nm.length<2){ continue; }
     p.name=nm;
     const key=nm.toLowerCase();
     if(seen[key]){
@@ -705,7 +735,8 @@ function migrate(s){ const d=defaultState(); s.settings={...d.settings,...(s.set
   Object.values(s.enemies).forEach(e=>{ if(!e.warMode) e.warMode = (e.status==="war"?"in":"out"); if(!e.targets) e.targets=[]; }); scrubAllProvinces(s); return s; }
 
 let saveTimer=null;
-function scheduleSave(){ setSaveStatus("save"); clearTimeout(saveTimer); saveTimer=setTimeout(save,400); }
+async function pushToServer(){ try{ const su=((STATE.settings.syncUrl||location.origin)+"").replace(/\/+$/,""); const sk=STATE.settings.syncKey||""; const myN=(STATE.myKd&&STATE.myKd.provinces||[]).length, enN=Object.keys(STATE.enemies||{}).length; if(myN===0 && enN===0) return; const r=await fetch(su+"/save",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:sk,state:JSON.stringify(STATE)})}); const j=await r.json().catch(()=>({})); setSaveStatus(j&&j.success?"saved":"local"); }catch(e){ setSaveStatus("local"); } }
+function scheduleSave(){ setSaveStatus("save"); clearTimeout(saveTimer); saveTimer=setTimeout(function(){ save(); pushToServer(); },400); }
 async function save(){
   try{ await window.storage.set(STORE_KEY, JSON.stringify(STATE)); storageOK=true; if(typeof setSaveStatus==="function")setSaveStatus("saved"); }
   catch(e){ storageOK=false; if(typeof setSaveStatus==="function")setSaveStatus("local"); }
@@ -1188,6 +1219,91 @@ function summaryBar(){
   </div>`;
 }
 
+function sciSection(p){const s=p.science||{};if(!s.list||!s.list.length)return "";const lc=n=>(Number(n)||0).toLocaleString();const rows=s.list.map(x=>`<tr><td class="l">${x.name}</td><td class="num">${lc(x.books)}</td><td class="num">${x.effect>0?"+":""}${x.effect}%</td><td class="l">${x.desc}</td></tr>`).join("");return `<div style="margin:14px 0 8px;color:var(--gold2);font-weight:600">📚 Sciences${s.scientistGen?(" — gen "+s.scientistGen+"%"):""}${s.nextCat?(" · next: "+s.nextCat):""}</div><table><thead><tr><th class="l">Science</th><th>Books</th><th>Effect</th><th class="l">Bonus</th></tr></thead><tbody>${rows}</tbody></table>`;}
+function buildSection(p){const b=p.buildings||{};if(!b.list||!b.list.length)return "";const lc=n=>(Number(n)||0).toLocaleString();const land=b.totalLand||0;const list=b.list.slice().sort((x,y)=>(y.own+y.prog)-(x.own+x.prog));const built=list.reduce((s,x)=>s+x.own,0);const building=list.reduce((s,x)=>s+x.prog,0);const empty=(b.undeveloped!=null)?b.undeveloped:(land-built-building);const pct=v=>land?(Math.round(v/land*1000)/10):0;const card=(lbl,val,gold)=>`<div style="flex:1;min-width:86px;background:rgba(255,255,255,.04);border-radius:6px;padding:6px 8px"><div style="font-size:11px;opacity:.6">${lbl}</div><div style="font-weight:600${gold?";color:var(--gold2)":""}">${lc(val)} <span style="opacity:.55;font-weight:400">${pct(val)}%</span></div></div>`;const rows=list.filter(x=>x.own>0||x.prog>0).map(x=>`<tr><td class="l">${x.name}</td><td class="num">${lc(x.own)}</td><td class="num">${pct(x.own)}%</td><td class="num">${x.prog>0?("+"+x.prog):"—"}</td></tr>`).join("");const meta=[];if(b.cost)meta.push(lc(b.cost)+"gc/ac");if(b.time)meta.push(b.time+"d build");if(b.credits)meta.push(lc(b.credits)+" credits");return `<div style="margin:14px 0 8px;color:var(--gold2);font-weight:600">🏗 Buildings${land?(" — "+lc(land)+" acres"):""}${meta.length?(" · "+meta.join(" · ")):""}</div><div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">${card("Built",built)}${card("Building",building,true)}${card("Empty",empty)}</div><table><thead><tr><th class="l">Building</th><th>Own</th><th>% land</th><th>In Prog</th></tr></thead><tbody>${rows}</tbody></table>`;}
+function attackSection(p){
+  const a=p.attacks;
+  if(!a||((!a.out||!Object.keys(a.out).length)&&(!a.in||!Object.keys(a.in).length)))return "";
+  const lc=n=>(Number(n)||0).toLocaleString();
+  const GAIN={"trad march":1,conquest:1,ambush:1};
+  const order=["trad march","conquest","ambush","raze","massacre","plunder","failed"];
+  const sum=(b,pred)=>order.reduce((s,t)=>s+((b&&b[t]&&pred(t))?b[t][1]:0),0);
+  const capO=sum(a.out,t=>GAIN[t]),capI=sum(a.in,t=>GAIN[t]),net=capO-capI;
+  const fmt=(t,c,dir)=>{const cnt=c[0],amt=c[1];let det;if(t==="raze")det=lc(amt)+" ac razed";else if(t==="massacre")det=lc(amt)+" killed";else if(t==="failed")det=(dir==="in"?"repelled":"bounced");else det=(dir==="in"?"-":"+")+lc(amt)+" ac";return `<tr><td class="l">`+t+`</td><td class="num">`+cnt+`</td><td class="l">`+det+`</td></tr>`;};
+  const rows=(b,dir)=>order.filter(t=>b&&b[t]).map(t=>fmt(t,b[t],dir)).join("");
+  let head=`⚔ War Activity`;if(capO||capI)head+=` <span style="font-weight:400;font-size:12px;opacity:.7">net `+(net>=0?"+":"")+lc(net)+` ac (+`+lc(capO)+` / -`+lc(capI)+`)</span>`;
+  let h=`<div style="margin:14px 0 8px;color:var(--gold2);font-weight:600">`+head+`</div>`;
+  const o=rows(a.out,"out"),i=rows(a.in,"in");
+  if(o)h+=`<div style="font-size:12px;opacity:.65;margin:2px 0 1px">Attacks out</div><table><tbody>`+o+`</tbody></table>`;
+  if(i)h+=`<div style="font-size:12px;opacity:.65;margin:7px 0 1px">Attacks in</div><table><tbody>`+i+`</tbody></table>`;
+  return h;
+}
+/* ===== full-CSV per-province intel card (ported from desktop) ===== */
+let intelSubProv=null, intelSubTab=0;
+const ITABS=[
+ ["Overview",["#","Name","id","Kd #","Ruler","Race","Personality","Combo","Group","Honor","Acres","NW","Pop%","IntelAge"]],
+ ["Off / Def",["Army","AllArmies","Off","Def","OffHome","DefHome","SomDef","OS Off","DS Def","OME","DME"]],
+ ["Units",["Military","Solds","OS","DS","Leets","Thv","Wiz","Peons","NonPeon","Horses","Prisoners","OS Train","DS Train","Elite Train","Thief Train","T-Credits","B-Credits"]],
+ ["Thief / Magic",["rTpa","oTpa","dTpa","rWpa","oWpa","dWpa","Ppa","Stlth","Mana","MAP","Unique Cooldown","OPs ToDo","Objectives","GoodSpells","BadSpells","Infil","Som","Sos"]],
+ ["Economy",["BE","Wages","DrftTgt","DrftRate","GCs","Food","Runes","TB"]],
+ ["Buildings","__BLD__"],
+ ["Science",["Stocked","Allocated","Alche","Tools","Housi","Produ","Bookk","Artis","Strat","Siege","Tacti","Valor","Heroi","Resil","Crime","Chann","Shiel","Cunni","Sorce","Fines"]],
+ ["Notes","__NOTES__"],
+];
+const IPAIR={"Off":"Opa","Def":"Dpa","NW":"NWpa","GCs":"GCpa"};
+const IUNITPA=new Set(["Military","Solds","OS","DS","Leets","Thv","Wiz","Peons","NonPeon","Horses","Prisoners"]);
+const IBLD=["Barr","Home","Farm","Mill","Bank","TGs","Arms","Rax","Fort","Cast","Hosp","Guil","Towe","TDs","WTs","Univ","Libs","Stab","Dung"];
+const IBLAB={Barr:"Barren",Home:"Homes",Farm:"Farms",Mill:"Mills",Bank:"Banks",TGs:"Training Grounds",Arms:"Armouries",Rax:"Barracks",Fort:"Forts",Cast:"Castles",Hosp:"Hospitals",Guil:"Guilds",Towe:"Towers",TDs:"Thieves' Dens",WTs:"Watch Towers",Univ:"Universities",Libs:"Libraries",Stab:"Stables",Dung:"Dungeons"};
+const IHON={0:"—",1:"Knight",2:"Lord / Lady",3:"Baron",4:"Viscount",5:"Count",6:"Marquis",7:"Duke",8:"Prince",9:"King"};
+function iNum(v){return parseFloat(String(v==null?"":v).replace(/[^0-9.\-]/g,""))||0;}
+function iFmt(v){ if(v===undefined||v===null||v==="") return "—"; let z=String(v); if(z.charAt(0)==="'") z=z.slice(1); return esc(z); }
+function iAge(v){ const sec=parseInt(String(v==null?"":v).replace(/[^0-9]/g,""))||0; if(sec<=0) return "—"; if(sec<3600) return Math.round(sec/60)+"m"; if(sec<86400) return Math.round(sec/3600)+"h"; return Math.round(sec/86400)+"d"; }
+function iHon(v){ const n=parseInt(String(v==null?"":v).replace(/[^0-9]/g,"")); return (IHON[n]!==undefined)?IHON[n]:iFmt(v); }
+function iRow(k,v){ return "<div class=\"irow\"><span class=\"ik\">"+k+"</span>"+v+"</div>"; }
+function iVal(d,k){
+  const v=d[k]; const empty=(v===undefined||v==="");
+  if(k==="Honor") return "<span class=\"iv\">"+iHon(v)+"</span>";
+  if(k==="IntelAge") return "<span class=\"iv"+(empty?" iempty":"")+"\">"+(empty?"—":iAge(v)+" old")+"</span>";
+  if(IPAIR[k]){ const pn=IPAIR[k], pv=d[pn]; return "<span class=\"iv"+(empty?" iempty":"")+"\">"+iFmt(v)+((pv!==undefined&&pv!=="")?"<span class=\"ipa\">"+pn+" "+iFmt(pv)+"</span>":"")+"</span>"; }
+  if(IUNITPA.has(k)){ const ac=iNum(d["Acres"]); const pa=ac?(iNum(v)/ac):0; return "<span class=\"iv"+(empty?" iempty":"")+"\">"+iFmt(v)+(empty?"":"<span class=\"ipa\">"+pa.toFixed(2)+" pa</span>")+"</span>"; }
+  return "<span class=\"iv"+(empty?" iempty":"")+"\">"+iFmt(v)+"</span>";
+}
+function iBldHtml(d){
+  const acres=iNum(d["Acres"]); let built=0;
+  const rows=IBLD.map(k=>{ const pct=iNum(d[k]); built+=pct; const lab=IBLAB[k]||k;
+    if(pct===0) return iRow(lab,"<span class=\"iv iempty\">—</span>");
+    const cnt=Math.round(acres*pct/100);
+    return iRow(lab,"<span class=\"iv\">"+cnt.toLocaleString()+"<span class=\"ipct\">"+iFmt(d[k])+"%</span></span>");
+  });
+  const openPct=Math.max(0,100-built), openCnt=Math.round(acres*openPct/100);
+  return "<div class=\"isurb\"><span class=\"ik\" style=\"color:var(--teal2)\">Survey age</span><span class=\"iv\">"+iAge(d["Sur"])+" old</span></div>"
+    +"<div class=\"icols\">"+rows.join("")+"</div>"
+    +"<div class=\"iinprog\"><span class=\"l\">In progress / open land</span><span class=\"r\">"+openCnt.toLocaleString()+" ac · "+openPct.toFixed(1)+"%</span></div>"
+    +"<div class=\"ibsum\"><span>Total land</span><span>"+acres.toLocaleString()+" acres · "+built.toFixed(1)+"% built</span></div>";
+}
+function iNotesHtml(p,d){
+  const disc=d["Discord"]||""; const cur=(p.note!==undefined&&p.note!==null)?p.note:(d["Note"]||"");
+  return iRow("Discord","<span class=\"iv"+(disc?"":" iempty")+"\">"+iFmt(disc)+"</span>")
+    +"<div style=\"padding:12px 2px 2px\"><div class=\"ik\" style=\"margin-bottom:7px\">My notes <span id=\"insave\" style=\"font-size:10px;color:var(--green2)\"></span></div>"
+    +"<textarea class=\"inote\" oninput=\"saveIntelNote(this.value)\" placeholder=\"Type anything — targets, timings, who to hit, reminders…\">"+esc(cur)+"</textarea></div>";
+}
+function saveIntelNote(v){ if(intelSubProv){ intelSubProv.note=v; const t=document.getElementById("insave"); if(t){ t.textContent="saved"; clearTimeout(window.__int); window.__int=setTimeout(()=>{ if(t)t.textContent=""; },900); } if(typeof save==="function"){ clearTimeout(window.__ins); window.__ins=setTimeout(save,600); } } }
+function findProvAny(id){ let p=(STATE.myKd.provinces||[]).find(x=>x.id===id); if(p) return p; for(const e of Object.values(STATE.enemies||{})){ p=(e.provinces||[]).find(x=>x.id===id); if(p) return p; } return null; }
+function intelTabsModal(p){
+  intelSubProv=p; const d=p.raw||{};
+  if(!Object.keys(d).length){ return provDetail(p); }
+  const tab=Math.min(intelSubTab,ITABS.length-1);
+  let h="<div class=\"mh\"><h3>"+iFmt(d["Name"]||p.name)+" <span class=\"tag\" style=\"color:var(--gold2)\">"+iFmt(d["Kd #"]||"")+"</span> <span class=\"tag\" style=\"color:var(--teal2)\">"+iFmt(d["Race"]||p.race)+"</span> <span class=\"tag\" style=\"color:var(--blue)\">"+iFmt(d["Personality"]||p.pers)+"</span></h3><button class=\"close\" data-act=\"closemodal\">×</button></div>";
+  h+="<div class=\"itabs\">"+ITABS.map((t,i)=>"<button data-act=\"intelsub:"+i+"\" class=\""+(i===tab?"on":"")+"\">"+t[0]+"</button>").join("")+"</div>";
+  const def=ITABS[tab]; let body;
+  if(def[1]==="__BLD__") body=iBldHtml(d);
+  else if(def[1]==="__NOTES__") body=iNotesHtml(p,d);
+  else { const cols=def[1]; body="<div class=\""+(cols.length>6?"icols":"")+"\">"+cols.map(k=>iRow(k,iVal(d,k))).join("")+"</div>"; }
+  h+="<div class=\"igrid\">"+body+"</div>";
+  return h;
+}
+function provDetail(p){const m=p.military||{};const land=Number(p.land)||0;const lc=n=>(Number(n)||0).toLocaleString();const pa=n=>land?(Number(n)/land).toFixed(2):"—";const u=(m.units||[]).map(x=>`<tr><td class="l">${x.name}</td><td class="num">${x.off}/${x.def}</td><td class="num">${lc(x.own)}</td><td class="num" style="color:var(--gold2)">${pa(x.own)}</td><td class="num">${x.training?lc(x.training):"—"}</td></tr>`).join("");const cell=(k,v,r)=>`<div class="sumcell"><div class="k">${k}</div><div class="v">${lc(v)}</div>${r?`<div class="k" style="color:var(--gold2)">${pa(v)}/ac</div>`:""}</div>`;const mil=m.units&&m.units.length?`<div class="sumbar">${cell("Off specs",m.offSpecs,1)}${cell("Def specs",m.defSpecs,1)}${cell("Elites",m.elites,1)}${cell("Thieves",m.thieves,1)}${cell("Wizards",m.wizards,1)}${cell("Soldiers",m.soldiers,0)}${cell("Credits",m.credits,0)}</div><table><thead><tr><th class="l">Unit</th><th>Off/Def</th><th>Owned</th><th>/Acre</th><th>Training</th></tr></thead><tbody>${u}</tbody></table><div class="note">Pop ${lc(m.totalPop)} · mil ${lc(m.milPop)} · peasants ${lc(m.peasants)} · land ${lc(land)}${m.draftRate?(" · draft: "+m.draftRate):""}</div>`:`<div class="empty">No military capture yet — open the Military page in-game and it will fill in within a minute.</div>`;return `<div class="mh"><h3>${p.name} — detail</h3><button class="close" data-act="closemodal">×</button></div><div style="margin:4px 0 10px;color:var(--gold2);font-weight:600">⚔ Military</div>${mil}${typeof attackSection==="function"?attackSection(p):""}${typeof buildSection==="function"?buildSection(p):""}${typeof sciSection==="function"?sciSection(p):""}`;}
+
 function myProvTable(){
   const ps=sortProvs(STATE.myKd.provinces,mySort,true), e=curEnemy(), eAvg=kdAvgNW(e);
   if(!ps.length) return `<div class="empty">No provinces. <a class="lnk" data-act="nav:mykd">Add or import your kingdom →</a></div>`;
@@ -1208,7 +1324,7 @@ function myProvTable(){
         <div class="lr-name"><b>#${idx+1} ${esc(p.name)}</b>${isUD?` <span class="plague" title="Undead — spreads plague">🦠</span>`:""}${tmTag}${eAvg?` <span class="pill sm ${inRange(pct)?"in":"out"}">${pctTxt(pct)}</span>`:""}</div>
         <div class="lr-sub">${esc(p.race||"?")}${p.pers?" · "+esc(p.pers):""} · NW <b>${fmtK(p.nw)}</b> · off <b>${fmtK(eff)}</b> · gen ${num(p.generals)}</div>
       </div>
-      <div class="lr-ctrl">
+      <div class="lr-ctrl"><span class="chip pd-btn" data-act="provdetail:${p.id}" title="Province detail">📋</span>
         <span class="chip ${fanaCap?"":"nocap"} ${p.fanaOn&&fanaCap?"on":""}" data-act="${fanaCap?"togglefana:"+p.id:""}">F</span>
         <span class="chip bl ${blCap?"":"nocap"} ${p.blOn&&blCap?"on":""}" data-act="${blCap?"togglebl:"+p.id:""}">BL</span>
         <span class="gtag">gens</span><span class="ministep"><button data-act="gen-:${p.id}">−</button><b>${num(p.generals)}</b><button data-act="gen+:${p.id}">＋</button></span>
@@ -1451,7 +1567,7 @@ function viewReference(){
 let intelKd="mine";   // 'mine' or enemy id
 let intelMode="stats";
 function viewIntel(){
-  const kds=[["mine","🛡 "+STATE.myKd.name+" (mine)"]].concat(Object.values(STATE.enemies).map(e=>[e.id,"🎯 "+e.name]));
+  const kds=[["mine","🛡 "+STATE.myKd.name+" (mine)"]].concat(Object.values(STATE.enemies).map(e=>[e.id,"🎯 "+(e.loc?e.loc+" — ":"")+e.name]));
   if(intelKd!=="mine" && !STATE.enemies[intelKd]) intelKd="mine";
   const isMine=intelKd==="mine";
   const kd=isMine?STATE.myKd:STATE.enemies[intelKd];
@@ -1505,17 +1621,17 @@ function viewIntel(){
   const head=isMine
     ? `<tr><th class="l">Province</th><th class="l">Race · Pers</th><th>NW</th><th>Land</th><th>Off (eff)</th><th>Def</th><th>Gens</th><th>Honor</th><th></th></tr>`
     : `<tr><th class="l">Province</th><th class="l">Race · Pers</th><th>NW</th><th>Land</th><th>Def</th><th>Off</th><th>TPA / md</th><th>WPA / md</th><th>Pop / Max</th><th>Honor</th><th class="l">Army</th><th></th></tr>`;
-  const rows=provs.map(p=>{
+  const rows=provs.map((p,i)=>{
     const rp=`${esc(p.race||"?")}${p.pers?" · "+esc(p.pers):""}`;
     if(isMine) return `<tr>
-      <td class="l"><span class="pname">${esc(p.name)}</span></td><td class="l"><span class="prace">${rp}</span></td>
+      <td class="l"><span class="pname">${i+1}. ${esc(p.name)}</span></td><td class="l"><span class="prace">${rp}</span></td>
       <td class="num">${fmt(p.nw)}</td><td class="num">${fmt(p.land)}</td>
       <td class="num" style="color:var(--gold2)">${fmt(effOffense(p))}</td><td class="num">${fmt(p.defense)}</td>
       <td class="num">${num(p.generals)}</td><td class="num dim">${p.honor?fmt(p.honor):"—"}</td>
-      <td><button class="btn xs ghost" data-act="editprov:${p.id}">✎</button></td></tr>`;
+      <td><button class="btn xs ghost" data-act="intelcard:${p.id}">📋</button> <button class="btn xs ghost" data-act="editprov:${p.id}">✎</button></td></tr>`;
     const army=p.armyOut?`<span class="army-out">OUT t${num(p.returnTick)||"?"}${p.incomingLand?" +"+fmtK(p.incomingLand)+"A":""}</span>`:`<span class="army-home">home</span>`;
     return `<tr>
-      <td class="l"><span class="pname">${esc(p.name)}</span></td><td class="l"><span class="prace">${rp}</span></td>
+      <td class="l"><span class="pname">${i+1}. ${esc(p.name)}</span></td><td class="l"><span class="prace">${rp}</span></td>
       <td class="num">${fmt(p.nw)}</td><td class="num">${fmt(p.land)}</td>
       <td class="num" style="color:var(--head);font-weight:700">${fmt(p.defense)}</td><td class="num dim">${p.offense?fmt(p.offense):"—"}</td>
       <td class="num">${p.tpa!==""&&p.tpa!=null?fmt1(p.tpa):"?"}${p.mdtpa!==""&&p.mdtpa!=null?' <span class="dim">'+fmt1(p.mdtpa)+"</span>":""}</td>
@@ -1523,7 +1639,7 @@ function viewIntel(){
       <td class="num dim">${p.pop?fmtK(p.pop):"—"}${p.maxpop?" / "+fmtK(p.maxpop):""}</td>
       <td class="num dim">${p.honor?fmt(p.honor):"—"}</td>
       <td class="l" style="font-size:11px">${army}</td>
-      <td><button class="btn xs ghost" data-act="intel-edit:${p.id}">✎</button></td></tr>`;
+      <td><button class="btn xs ghost" data-act="intelcard:${p.id}">📋</button> <button class="btn xs ghost" data-act="intel-edit:${p.id}">✎</button></td></tr>`;
   }).join("");
   return picker+totals+`<div class="panel"><div style="overflow-x:auto"><table><thead>${head}</thead><tbody>${rows}</tbody></table></div></div>`;
 }
@@ -1793,7 +1909,7 @@ function viewSettings(){
         <div class="fld"><label>Live Sync URL (intel server)</label><input type="text" id="set_sync" value="${esc(s.syncUrl||"")}" placeholder="http://your-host:8108"></div>
         <div class="fld"><label>Live Sync key (optional)</label><input type="text" id="set_synckey" value="${esc(s.syncKey||"")}"></div>
         <div class="fld"><label>Current tick</label><input type="number" id="set_tick" value="${STATE.tick}"></div>
-      </div>
+      </div><div class="frow"><div class="fld"><label>★ My Kingdom location (set each age, e.g. 3:4)</label><input type="text" id="set_myloc" value="${esc(STATE.myKd&&STATE.myKd.loc||"")}" placeholder="3:4"></div><div class="fld"><label>★ My Kingdom name</label><input type="text" id="set_myname" value="${esc(STATE.myKd&&STATE.myKd.name||"")}" placeholder="My Kingdom"></div></div>
       <div class="frow">
         <div class="fld"><label>Age 115 start (your local time — sets the Utopian calendar)</label><input type="datetime-local" id="set_agestart" value="${esc(toLocalDT(s.ageStart||""))}"></div>
         <div class="fld"><label>&nbsp;</label><div class="note" style="padding-top:9px">Utopian date = ${esc(utopianDate(new Date()).label)}</div></div>
@@ -1893,7 +2009,7 @@ function confirmDo(msg, fn, yesLabel){
 }
 document.addEventListener("click",ev=>{
   const t=ev.target.closest("[data-act]"); if(!t)return;
-  const act=t.dataset.act; if(!act)return;
+  const act=t.dataset.act; if(!act)return;if(act.indexOf("provdetail:")===0){var pp=mp(act.slice(11));if(pp)openModal(provDetail(pp));return;}
   const [cmd,arg]=act.split(":");
   switch(cmd){
     case "menu": document.body.classList.toggle("menu-open"); break;
@@ -1935,6 +2051,8 @@ document.addEventListener("click",ev=>{
     case "intel-edit": { if(intelKd!=="mine"){ STATE.activeEnemy=intelKd; } openEnemyProv(arg); } break;
     case "addprov": openProv(null); break;
     case "editprov": openProv(arg); break;
+    case "intelcard": { const dp=findProvAny(arg); if(dp){ intelSubTab=0; openModal(intelTabsModal(dp)); } break; }
+    case "intelsub": { intelSubTab=parseInt(arg)||0; if(intelSubProv) openModal(intelTabsModal(intelSubProv)); break; }
     case "delprov": confirmDo("Delete this province?",()=>{ mutate(()=>{STATE.myKd.provinces=STATE.myKd.provinces.filter(p=>p.id!==arg);}); toast("Province deleted."); },"Delete"); break;
     case "addenemy": openKd(null); break;
     case "editkd": openKd(arg); break;
@@ -2536,7 +2654,7 @@ function routeFeedEntry(en){
       const nid=uid();
       e={id:nid,name:nm,loc:loc,status:"available",warMode:"out",eowcfExit:"",note:"",wave:[],targets:[],provinces:[],_rev:Date.now()};
       STATE.enemies[nid]=e;
-      if(!STATE.activeEnemy) STATE.activeEnemy=nid;
+      /* auto-pick removed: choose your enemy manually */
     } else { e.name=nm; e._rev=Date.now(); }
     parseKingdomProvinces(txt, e);
     return true;
@@ -2839,7 +2957,7 @@ function saveSettings(){
     const s=STATE.settings;
     s.rangeLow=num(gv("set_rl"))||80; s.rangeHigh=num(gv("set_rh"))||125;
     s.defGenerals=num(gv("set_dg"))||4; s.defGensAtk=num(gv("set_dga"))||1;
-    s.syncUrl=gv("set_sync").trim(); s.syncKey=gv("set_synckey").trim(); syncCursor=0; if(s.syncUrl) syncPull();
+    s.syncUrl=gv("set_sync").trim(); s.syncKey=gv("set_synckey").trim(); syncCursor=0; if(s.syncUrl) syncPull(); var _ml=gv("set_myloc").trim(); var _mn=gv("set_myname").trim(); if(STATE.myKd){ if(_ml) STATE.myKd.loc=_ml; if(_mn) STATE.myKd.name=_mn; }
     s.fanaPct=num(gv("set_fp")); s.blPct=num(gv("set_bp"));
     s.casRate=num(gv("set_cas"))||7.5; s.lsPerAcre=num(gv("set_ls"))||22;
     STATE.tick=num(gv("set_tick"));

@@ -84,14 +84,14 @@ async function checkArmyReturns(client){
     const capTs=th.ts||now;
     armies.forEach((a)=>{
       const returnAt=capTs + a.days*TICK_MIN*60000;
-      const akey=want+'|'+Math.round(returnAt/600000)+'|'+a.land;
+      const akey=want+'|'+a.land;
       const rec=armyState[akey] || { warned:false, home:false, prov:lk.prov, returnAt };
-      const minsLeft=(returnAt-now)/60000;
+      const minsLeft=(rec.returnAt-now)/60000;
       if(!rec.warned && minsLeft<=30 && minsLeft>0){
         rec.warned=true; armyState[akey]=rec; saveArmyState();
         client.users.fetch(lk.discord_id).then(u=>u.send(':hourglass_flowing_sand: **Army returning soon** — general home in ~'+Math.max(1,Math.round(minsLeft))+' min with **'+a.land.toLocaleString()+' land**. ('+lk.prov+')')).catch(()=>{});
       }
-      if(!rec.home && minsLeft<=0){
+      if(!rec.home && minsLeft<=0 && minsLeft>-90){
         rec.home=true; rec.warned=true; armyState[akey]=rec; saveArmyState();
         client.users.fetch(lk.discord_id).then(u=>u.send(':white_check_mark: **Army home!** General returned with **'+a.land.toLocaleString()+' land**. ('+lk.prov+')')).catch(()=>{});
       }
@@ -102,7 +102,7 @@ async function checkArmyReturns(client){
   saveArmyState();
 }
 // ---- HOURLY TICK STATUS DM ----
-let lastTickDmHour=-1;
+let lastTickDmHour=(()=>{try{return JSON.parse(fs.readFileSync(__dirname+'/tickdm.json','utf8')).h;}catch(e){return -1;}})();
 async function checkTickDM(client){
   let feed=null; try{ feed=await httpGet('/feed?key='+KEY+'&since=0'); }catch(e){ return; }
   if(!feed||!feed.entries) return;
@@ -114,7 +114,7 @@ async function checkTickDM(client){
   const tickHour=new Date(tickAt).getUTCHours();
   const mins=(now-tickAt)/60000;
   if(mins>=0 && mins<=1.5 && lastTickDmHour!==tickHour){
-    lastTickDmHour=tickHour;
+    lastTickDmHour=tickHour; try{fs.writeFileSync(__dirname+'/tickdm.json',JSON.stringify({h:tickHour}));}catch(e){}
     console.log('TICK DM firing for hour', tickHour);
     for(const k in links){
       const lk=links[k]; if(!lk.discord_id) continue;
@@ -125,23 +125,6 @@ async function checkTickDM(client){
     }
   }
 }
-async function dmAttacked(client, ev){
-  const lk = linkForTarget(ev.target);
-  if(!lk) return;
-  try{
-    const user = await client.users.fetch(lk.discord_id);
-    const T = { captured:'captured', razed:'razed', conquered:'conquered', massacre:'massacred', plunder:'plundered', ambush:'ambushed', bounce:'bounced off' };
-    let what = T[ev.type]||ev.type;
-    let dt = '';
-    if(ev.acres) dt = ' — ' + ev.acres.toLocaleString() + ' acres';
-    else if(ev.killed) dt = ' — ' + ev.killed.toLocaleString() + ' killed';
-    else if(ev.amount) dt = ' — ' + ev.amount.toLocaleString() + ' taken';
-    const head = ':rotating_light: **' + lk.prov + ' was attacked!**\n' + (ev.attacker||'someone') + ' ' + what + ' you' + dt + '.';
-    let card = await statusCard(lk.prov);
-    await user.send(card ? head + '\n\n' + card : head);
-  }catch(e){ console.error('DM fail:', e.message); }
-}
-
 const KEY = process.env.INTEL_KEY || '';
 const BASE = 'http://localhost:8108';
 const parser = makeNewsParser();
@@ -188,6 +171,30 @@ function parseSorcPage(txt){
   return g;
 }
 // Find freshest feed entry whose URL matches a page type, for a province
+/*SPELLS-THRONE-FALLBACK*/ function throneSpells(state, pname){
+  var low=String(pname||``).toLowerCase();
+  var all=(state&&state.myKd&&state.myKd.provinces||[]).slice();
+  var en=(state&&state.enemies)||{};
+  for(var k in en){ if(en[k]&&en[k].provinces) all=all.concat(en[k].provinces); }
+  var prov=null;
+  for(var z=0;z<all.length;z++){ if(String(all[z].name||``).toLowerCase()===low){ prov=all[z]; break; } }
+  if(!prov||!prov.spells||!prov.spells.length) return [];
+  var NB=[`meteor`,`greed`,`fool`,`gluttony`,`pitfall`,`explosion`,`amnesia`,`nightmare`,`vortex`,`tornado`,`lightning`,`fireball`,`land lust`,`storm`,`vermin`,`drought`,`chastity`];
+  return prov.spells.map(function(sp){
+    var nl=String(sp.name||``).toLowerCase(); var bad=false;
+    for(var b=0;b<NB.length;b++){ if(nl.indexOf(NB[b])>=0){ bad=true; break; } }
+    return {name:sp.name, dur:(sp.days?(sp.days+`d`):`today`), bad:bad};
+  });
+}
+function spellsFromThrone(txt){
+  var dm=String(txt||``).match(/Duration:\s*([^\n]+)/);
+  if(!dm) return [];
+  var rx=/([A-Za-z][A-Za-z'’\- ]*?)\s*\(\s*(\d+)\s*days?\s*\)/g;
+  var out=[]; var m;
+  while((m=rx.exec(dm[1]))!==null){ out.push({name:m[1].trim(), days:Number(m[2]), bad:false}); }
+  return out;
+}
+function parseActiveSpells(txt){var out=[];var L=String(txt||``).split(String.fromCharCode(10));var NB=[`meteor`,`greed`,`fool`,`gluttony`,`pitfall`,`explosion`,`amnesia`,`nightmare`,`vortex`,`tornado`,`lightning`,`fireball`,`land lust`,`storm`,`vermin`,`drought`,`chastity`];for(var i=1;i<L.length;i++){var ln=L[i].split(String.fromCharCode(9)).join(` `).trim();var head=ln.split(` `)[0];var isDur=head===`-`||(head!==``&&!isNaN(Number(head)));if(!isDur)continue;var name=(L[i-1]||``).split(String.fromCharCode(9)).join(` `).trim();var low=name.toLowerCase();if(!name||low.indexOf(`spell name`)>=0||low.indexOf(`uniques`)>=0||low.indexOf(`activation`)>=0)continue;var dur=head===`-`?`today`:head+`d`;var bad=false;for(var b=0;b<NB.length;b++){if(low.indexOf(NB[b])>=0){bad=true;break;}}out.push({name:name,dur:dur,bad:bad});}return out;}
 function freshestPage(feed, provName, urlNeedle){
   if(!feed||!feed.entries) return null;
   const want=(provName||'').toLowerCase().replace(/[~`*]/g,'').trim();
@@ -303,15 +310,21 @@ function findProv(state, name) {
 function provCard(hit) {
   const p = hit.p, i = p.intel || {};
   const g = (k) => (i[k] != null ? i[k] : p[k]);
+  const _land = Number(g('land')||p.land)||0;
+  const _pa = (v,dec) => { const n=Number(v); return (_land>0 && isFinite(n) && n>0) ? (n/_land).toFixed(dec) : null; };
+  const _opa = (g('opa')!=null?g('opa'):_pa(g('offHome'),0));
+  const _dpa = (g('dpa')!=null?g('dpa'):_pa(g('defHome'),0));
+  const _rtpa = (g('rtpa')!=null?g('rtpa'):_pa(g('thieves'),1));
+  const _rwpa = (g('rwpa')!=null?g('rwpa'):_pa(g('wizards'),1));
   const L = [];
   L.push('__**' + p.name + '**__ · ' + (p.race||'?') + '/' + (p.pers||'?') + ' · ' + hit.loc + ' · ' + hit.kd);
   L.push('Land **' + N(g('land')||p.land) + '** · NW **' + N(p.nw) + '**' + (p.honor?' · '+p.honor:''));
   L.push('**Military**');
   L.push('  Off ' + N(g('offHome')) + ' · Def ' + N(g('defHome')) + (g('ome')?' · OME '+g('ome')+'%':'') + (g('dme')?' · DME '+g('dme')+'%':''));
-  L.push('  OSPA ' + (g('opa')||'?') + ' · DSPA ' + (g('dpa')||'?') + ' · Army ' + N(g('military')));
+  L.push('  OSPA ' + (_opa||'?') + ' · DSPA ' + (_dpa||'?'));
   L.push('**Thievery / Magic**');
-  L.push('  mTPA ' + (p.mdtpa||'?') + ' · oTPA ' + (g('otpa')||'?') + ' · dTPA ' + (g('dtpa')||'?') + ' · rTPA ' + (g('rtpa')||'?'));
-  L.push('  mWPA ' + (p.mdwpa||'?') + ' · oWPA ' + (g('owpa')||'?') + ' · dWPA ' + (g('dwpa')||'?') + ' · rWPA ' + (g('rwpa')||'?'));
+  L.push('  mTPA ' + (p.mdtpa||'?') + ' · oTPA ' + (g('otpa')||'?') + ' · dTPA ' + (g('dtpa')||'?') + ' · rTPA ' + (_rtpa||'?'));
+  L.push('  mWPA ' + (p.mdwpa||'?') + ' · oWPA ' + (g('owpa')||'?') + ' · dWPA ' + (g('dwpa')||'?') + ' · rWPA ' + (_rwpa||'?'));
   L.push('  Thieves ' + N(g('thieves')) + ' · Wizards ' + N(g('wizards')) + (g('be')?' · BE '+g('be')+'%':''));
   L.push('**Economy**');
   L.push('  Gold ' + N(g('gcs')) + ' · Food ' + N(g('food')) + ' · Runes ' + N(g('runes')) + ' · Peons ' + N(g('peons')));
@@ -320,10 +333,7 @@ function provCard(hit) {
   return L.join('\n');
 }
 function kdSummary(state, locOrName) {
-  const q = (locOrName||'').toLowerCase();
-  let kd = null;
-  if (state.myKd && ((state.myKd.loc||'').toLowerCase()===q || (state.myKd.name||'').toLowerCase().includes(q))) kd = state.myKd;
-  if (!kd) kd = Object.values(state.enemies||{}).find(e => (e.loc||'').toLowerCase()===q || (e.name||'').toLowerCase().includes(q));
+  const kd = findKd(state, locOrName);
   if (!kd) return null;
   const ps = kd.provinces||[];
   const gi = (p,k) => { const i=p.intel||{}; return i[k]!=null?i[k]:p[k]; };
@@ -387,15 +397,79 @@ function wpaCard(hit){
 }
 function enemyDef(p){ const i=p.intel||{}; return Number(i.defHome||i.def||p.defense||0); }
 function findKd(state, q){
-  q=(q||'').toLowerCase();
-  if(state.myKd && ((state.myKd.loc||'').toLowerCase()===q||(state.myKd.name||'').toLowerCase().includes(q))) return state.myKd;
-  return Object.values(state.enemies||{}).find(e=>(e.loc||'').toLowerCase()===q||(e.name||'').toLowerCase().includes(q));
+  q=(q||'').trim().toLowerCase();
+  if(!q) return null;
+  if(state.myKd && (state.myKd.loc||'').trim().toLowerCase()===q) return state.myKd;
+  return Object.values(state.enemies||{}).find(e=>(e.loc||'').trim().toLowerCase()===q) || null;
 }
 function breakLine(hit, off){
   const p=hit.p; const def=enemyDef(p);
   const ok = off>=def;
   const diff = Math.abs(off-def);
   return (ok?':white_check_mark: **BREAKS**':':x: cannot break')+' — '+p.name+' (def '+N(def)+')'+(ok?' by +'+N(diff):' short '+N(diff));
+}
+function boardCard(state, off, q){
+  const ens=Object.values(state.enemies||{});
+  const kd = q ? findKd(state,q) : (ens[0]||null);
+  if(!kd) return null;
+  const gland=p=>Number((p.intel||{}).land||p.land||0);
+  const rows=(kd.provinces||[]).map(p=>({p,def:enemyDef(p),land:gland(p),out:!!p.armyOut,inc:Number(p.incomingLand||0)>0}));
+  const haveOff = off && off>0;
+  const scryed=rows.filter(x=>x.def>0);
+  const unscryed=rows.filter(x=>!(x.def>0));
+  const flag=x=>(x.out?' :crossed_swords:out':'')+(x.inc?' :dart:inc':'');
+  const L=[':dart: **Target Board \u2014 '+kd.name+' ('+(kd.loc||'?')+')**'+(haveOff?'   _your off '+N(off)+'_':'')];
+  if(haveOff){
+    const breakable=scryed.filter(x=>off>=x.def).sort((a,b)=>b.land-a.land);
+    const tough=scryed.filter(x=>off<x.def).sort((a,b)=>a.def-b.def);
+    L.push('');
+    L.push(':white_check_mark: **Breakable** ('+breakable.length+'/'+scryed.length+' scryed)');
+    if(breakable.length) breakable.slice(0,15).forEach((x,i)=>L.push('`'+String(i+1).padStart(2)+'` '+x.p.name+' \u2014 '+N(x.land)+'a \u00b7 def '+N(x.def)+' (+'+N(off-x.def)+')'+flag(x)));
+    else L.push('_none breakable with '+N(off)+'_');
+    if(tough.length){ L.push(''); L.push(':red_circle: **Too tough** ('+tough.length+')'); tough.slice(0,5).forEach((x,i)=>L.push('`'+String(i+1).padStart(2)+'` '+x.p.name+' \u2014 '+N(x.land)+'a \u00b7 def '+N(x.def)+' ('+N(off-x.def)+')'+flag(x))); }
+  } else {
+    L.push('');
+    L.push('**Scryed \u2014 weakest first** ('+scryed.length+')');
+    if(scryed.length) scryed.sort((a,b)=>a.def-b.def).slice(0,15).forEach((x,i)=>L.push('`'+String(i+1).padStart(2)+'` '+x.p.name+' \u2014 '+N(x.land)+'a \u00b7 def '+N(x.def)+flag(x)));
+    else L.push('_no defense scryed yet \u2014 spy the kingdom_');
+    L.push('_tip: /board off:NNNNN to see what you can break_');
+  }
+  if(unscryed.length){ L.push(''); L.push(':white_circle: **Unscryed** ('+unscryed.length+') \u2014 spy these'); unscryed.sort((a,b)=>b.land-a.land).slice(0,8).forEach((x,i)=>L.push('`'+String(i+1).padStart(2)+'` '+x.p.name+' \u2014 '+N(x.land)+'a \u00b7 NW '+N(x.p.nw)+flag(x))); }
+  return L.join('\n');
+}
+function kdMagicCard(state, q, metric){
+  const kd = q ? findKd(state,q) : (Object.values(state.enemies||{})[0]||null);
+  if(!kd) return null;
+  const num=v=>{const n=Number(v); return isFinite(n)&&n>0?n:0;};
+  const rows=(kd.provinces||[]).map(p=>({p,tpa:num(p.tpa),wpa:num(p.wpa),mdt:num(p.mdtpa),mdw:num(p.mdwpa)}));
+  const isW = metric==='wpa';
+  const raw=x=>isW?x.wpa:x.tpa, mod=x=>isW?x.mdw:x.mdt, eff=x=>mod(x)>0?mod(x):raw(x);
+  const scryed=rows.filter(x=>raw(x)>0||mod(x)>0).sort((a,b)=>eff(a)-eff(b));
+  const unscryed=rows.filter(x=>!(raw(x)>0||mod(x)>0));
+  const f=v=>v>0?v.toFixed(1):'?';
+  const cell=(r,m)=>f(r)+(m>0?'\u2192'+f(m):'');
+  const label = isW?'Magic / WPA':'Thievery / TPA';
+  const L=[':crystal_ball: **'+label+' \u2014 '+kd.name+' ('+(kd.loc||'?')+')**  _softest first \u00b7 raw\u2192mod_'];
+  scryed.slice(0,20).forEach((x,i)=>L.push('`'+String(i+1).padStart(2)+'` '+x.p.name+' \u2014 T '+cell(x.tpa,x.mdt)+' \u00b7 W '+cell(x.wpa,x.mdw)));
+  if(!scryed.length) L.push('_none scryed for '+(isW?'WPA':'TPA')+' yet \u2014 run survey + infiltrate + spy science + spy throne_');
+  if(unscryed.length){ L.push(''); L.push(':white_circle: **No '+(isW?'WPA':'TPA')+' intel** ('+unscryed.length+'): '+unscryed.slice(0,16).map(x=>x.p.name).join(', ')); }
+  return L.join('\n');
+}
+function myResourceCard(state, metric){
+  const kd = state.myKd;
+  if(!kd || !(kd.provinces||[]).length) return null;
+  const isM = metric==='mana';
+  const key = isM?'mana':'stealth';
+  const rows=(kd.provinces||[]).map(p=>{const n=Number(p[key]); const v=(p[key]!=null&&p[key]!==''&&isFinite(n))?n:null; return {p,v};});
+  const have=rows.filter(x=>x.v!=null).sort((a,b)=>a.v-b.v);
+  const missing=rows.filter(x=>x.v==null);
+  const label = isM?'Mana':'Stealth';
+  const emoji = isM?':magic_wand:':':detective:';
+  const L=[emoji+' **'+label+' \u2014 '+(kd.name||'My KD')+'**  _lowest first_'];
+  have.slice(0,30).forEach((x,i)=>L.push('`'+String(i+1).padStart(2)+'` '+x.p.name+' \u2014 '+x.v+'%'));
+  if(!have.length) L.push('_no '+label.toLowerCase()+' captured yet \u2014 visit each throne page_');
+  if(missing.length){ L.push(''); L.push(':white_circle: **No '+label.toLowerCase()+' intel** ('+missing.length+'): '+missing.slice(0,16).map(x=>x.p.name).join(', ')); }
+  return L.join('\n');
 }
 function targetsCard(state, q, off){
   const kd=findKd(state,q); if(!kd) return null;
@@ -457,16 +531,21 @@ function findCard(state, q){
 }
 const cmds = [
   new SlashCommandBuilder().setName('prov').setDescription('Full intel on a province').addStringOption(o=>o.setName('name').setDescription('province name').setRequired(true)),
-  new SlashCommandBuilder().setName('intel').setDescription('Whole-KD overview').addStringOption(o=>o.setName('kd').setDescription('KD location or name').setRequired(true)),
+  new SlashCommandBuilder().setName('intel').setDescription('Whole-KD overview').addStringOption(o=>o.setName('kd').setDescription('KD location e.g. 6:4').setRequired(true)),
   new SlashCommandBuilder().setName('kds').setDescription('List tracked kingdoms'),
   new SlashCommandBuilder().setName('survey').setDescription('Building breakdown for a province').addStringOption(o=>o.setName('name').setDescription('province name').setRequired(true)),
   new SlashCommandBuilder().setName('tpa').setDescription('Thievery & magic for a province').addStringOption(o=>o.setName('name').setDescription('province name').setRequired(true)),
   new SlashCommandBuilder().setName('econ').setDescription('Economy for a province').addStringOption(o=>o.setName('name').setDescription('province name').setRequired(true)),
   new SlashCommandBuilder().setName('wpa').setDescription('Magic detail for a province').addStringOption(o=>o.setName('name').setDescription('province name').setRequired(true)),
   new SlashCommandBuilder().setName('break').setDescription('Can your offense break a province?').addStringOption(o=>o.setName('name').setDescription('province name').setRequired(true)).addIntegerOption(o=>o.setName('off').setDescription('your offense').setRequired(true)),
-  new SlashCommandBuilder().setName('targets').setDescription('All breakable provinces in a KD').addStringOption(o=>o.setName('kd').setDescription('KD loc/name').setRequired(true)).addIntegerOption(o=>o.setName('off').setDescription('your offense').setRequired(true)),
-  new SlashCommandBuilder().setName('weak').setDescription('Lowest-defense provinces in a KD').addStringOption(o=>o.setName('kd').setDescription('KD loc/name').setRequired(true)),
-  new SlashCommandBuilder().setName('fat').setDescription('Biggest-land provinces in a KD').addStringOption(o=>o.setName('kd').setDescription('KD loc/name').setRequired(true)),
+  new SlashCommandBuilder().setName('targets').setDescription('All breakable provinces in a KD').addStringOption(o=>o.setName('kd').setDescription('KD location e.g. 6:4').setRequired(true)).addIntegerOption(o=>o.setName('off').setDescription('your offense').setRequired(true)),
+  new SlashCommandBuilder().setName('board').setDescription('Enemy target board: breakable / unscryed / army-out').addIntegerOption(o=>o.setName('off').setDescription('your offense (optional - else your linked province)').setRequired(false)).addStringOption(o=>o.setName('kd').setDescription('enemy KD loc (optional)').setRequired(false)),
+  new SlashCommandBuilder().setName('kdtpa').setDescription('Thievery (TPA) for every province in a KD').addStringOption(o=>o.setName('kd').setDescription('KD loc (default: your enemy)').setRequired(false)),
+  new SlashCommandBuilder().setName('kdwpa').setDescription('Magic (WPA) for every province in a KD').addStringOption(o=>o.setName('kd').setDescription('KD loc (default: your enemy)').setRequired(false)),
+  /*STEALTH-MANA-CMD*/ new SlashCommandBuilder().setName('stealth').setDescription('Stealth % for every province in my KD'),
+  new SlashCommandBuilder().setName('mana').setDescription('Mana % for every province in my KD'),
+  new SlashCommandBuilder().setName('weak').setDescription('Lowest-defense provinces in a KD').addStringOption(o=>o.setName('kd').setDescription('KD location e.g. 6:4').setRequired(true)),
+  new SlashCommandBuilder().setName('fat').setDescription('Biggest-land provinces in a KD').addStringOption(o=>o.setName('kd').setDescription('KD location e.g. 6:4').setRequired(true)),
   new SlashCommandBuilder().setName('left').setDescription('My provinces leftover offense').addStringOption(o=>o.setName('name').setDescription('one province (optional)').setRequired(false)),
   new SlashCommandBuilder().setName('find').setDescription('Search provinces by name or ruler').addStringOption(o=>o.setName('text').setDescription('search text').setRequired(true)),
   new SlashCommandBuilder().setName('link').setDescription('Link your Discord to your province').addStringOption(o=>o.setName('province').setDescription('your province name').setRequired(true)),
@@ -477,10 +556,281 @@ const cmds = [
 
   new SlashCommandBuilder().setName('help').setDescription('List everything the bot can do'),
   new SlashCommandBuilder().setName('live').setDescription('Freshest live intel for a province from the feed').addStringOption(o=>o.setName('name').setDescription('province name').setRequired(true))
-].map(c=>c.toJSON());
+, new SlashCommandBuilder().setName(`spells`).setDescription(`Active spells up + hostile on a province`).addStringOption(o=>o.setName(`name`).setDescription(`province or blank for yours`).setRequired(false))].map(c=>c.toJSON());
+
+
+// ===== WARLOG ATTACK POSTING (reads engine state.json - correct types, real dates) =====
+// /*PLOG-V1*/ province-log war-news feed (isolated; reuses KEY, alreadyPosted, markSeen, ch)
+function plogShortDate(d){ return String(d||'').replace(/ of YR/,' YR'); }
+function plogEvents(txt){
+  var s=String(txt||'');
+  var rx=/([A-Z][a-z]+ \d{1,2} of YR\d+)[\t ]+/g, marks=[], m;
+  while((m=rx.exec(s))!==null){ marks.push({date:m[1], start:m.index, ts:rx.lastIndex}); }
+  var out=[];
+  for(var i=0;i<marks.length;i++){
+    var end=(i+1<marks.length)?marks[i+1].start:s.length;
+    var body=s.slice(marks[i].ts,end).replace(/\s+/g,' ').trim();
+    if(body) out.push({date:marks[i].date, text:body});
+  }
+  return out;
+}
+function plogClassify(prov, date, text){
+  var t=text, SD=plogShortDate(date);
+  var tgt=(t.match(/\(([^()]*\([\d:]+\)),\s*sent\s+[\d,]+\)/)||[])[1];
+  var am=t.match(/Your forces arrive at (.+?)\.\s/);
+  if(am){
+    var target=am[1].trim();
+    var acres=(t.match(/taken ([\d,]+) acres/)||[])[1];
+    var killed=(t.match(/killed about ([\d,]+) enemy/)||[])[1];
+    var lossM=t.match(/We lost ([\d,]+) (\w+) and [\d,]+ horses/);
+    var pris=(t.match(/imprisoned ([\d,]+) additional/)||[])[1];
+    var sig='plog:'+prov+'|'+date+'|atk|'+target+'|'+(acres||'0');
+    var msg;
+    if(acres){ var p=[':crossed_swords: **'+prov+'** \u2192 '+target+' \u2014 took **'+acres+'** acres'];
+      if(killed)p.push('killed '+killed); if(lossM)p.push('lost '+lossM[1]+' '+lossM[2]); if(pris)p.push(pris+' prisoners');
+      msg=p.join(' \u00b7 ')+'  _'+SD+'_';
+    } else { msg=':crossed_swords: **'+prov+'** \u2192 '+target+' \u2014 attack repelled  _'+SD+'_'; }
+    return {kind:'atk', msg:msg, sig:sig};
+  }
+  var aid=t.match(/We have sent ([\d,]+) (runes|gold coins|bushels|soldiers|acres|food) to (.+?)\./);
+  if(aid){ return {kind:'aid',
+    msg:':handshake: **'+prov+'** sent '+aid[1]+' '+aid[2]+' \u2192 '+aid[3].trim()+'  _'+SD+'_',
+    sig:'plog:'+prov+'|'+date+'|aid|'+aid[3].trim()+'|'+aid[1]+aid[2]}; }
+  var foil=t.match(/the mission was foiled\. We lost ([\d,]+) thieves/);
+  if(foil){ return {kind:'op',
+    msg:':dagger: **'+prov+'** op'+(tgt?' \u2192 '+tgt:'')+' \u2014 **foiled**, lost '+foil[1]+' thieves  _'+SD+'_',
+    sig:'plog:'+prov+'|'+date+'|op|'+(tgt||'?')+'|foiled|'+foil[1]}; }
+  if(/our operation was a success|Our thieves have/.test(t)){
+    var what=/infiltrated the military ranks/.test(t)?'military intel':
+             /bribed an enemy general/.test(t)?'bribed a general':
+             /Military Elders/.test(t)?'survey of military':
+             /been attacked .* in the last month/.test(t)?'recon':'success';
+    return {kind:'op',
+      msg:':dagger: **'+prov+'** op'+(tgt?' \u2192 '+tgt:'')+' \u2014 '+what+'  _'+SD+'_',
+      sig:'plog:'+prov+'|'+date+'|op|'+(tgt||'?')+'|'+what}; }
+  var lostT=t.match(/^We lost ([\d,]+) thie(?:f|ves) in the operation/);
+  if(lostT){ return {kind:'op',
+    msg:':dagger: **'+prov+'** op \u2014 lost '+lostT[1]+' thieves  _'+SD+'_',
+    sig:'plog:'+prov+'|'+date+'|op|lost|'+lostT[1]}; }
+  var sp=t.match(/Your wizards gather [\d,]+ runes and begin casting, and the spell succeeds\. (.+)$/);
+  if(sp){ var eff=sp[1].trim(); var dm=eff.match(/for (\d+) days?/);
+    var clean=eff.replace(/\s*for \d+ days?[.!]?\s*$/,'').replace(/[.!]+$/,'').trim();
+    return {kind:'spell',
+      msg:':sparkles: **'+prov+'** cast: '+clean+(dm?' ('+dm[1]+'d)':'')+'  _'+SD+'_',
+      sig:'plog:'+prov+'|'+date+'|spell|'+clean.slice(0,42)}; }
+  return null;
+}
+function plogFetchFeed(){
+  return new Promise(function(resolve){
+    try{
+      require('http').get('http://localhost:8108/feed?key='+KEY+'&since=0', function(r){
+        var d=''; r.on('data',function(c){d+=c;}); r.on('end',function(){
+          try{ var j=JSON.parse(d); resolve(j.entries||(Array.isArray(j)?j:[])); }catch(e){ resolve([]); }
+        });
+      }).on('error',function(){ resolve([]); });
+    }catch(e){ resolve([]); }
+  });
+}
+async function pollProvinceLogs(ch, _feed){
+  var entries=_feed||await plogFetchFeed();
+  var logs=entries.filter(function(e){ return /province_log/.test(String(e.url||'')); });
+  if(!logs.length) return;
+  var byProv={};
+  logs.forEach(function(e){ var p=e.prov||'?'; if(!byProv[p]||(e.ts||0)>(byProv[p].ts||0)) byProv[p]=e; });
+  for(var p in byProv){
+    var e=byProv[p];
+    var evs=plogEvents(e.data_simple||'');
+    var primeKey='plog:primed:'+p, primed=alreadyPosted(primeKey), batch=[];
+    for(var k=0;k<evs.length;k++){
+      var c=plogClassify(p, evs[k].date, evs[k].text);
+      if(!c) continue;
+      if(alreadyPosted(c.sig)) continue;
+      if(!primed){ markSeen(c.sig); continue; }
+      batch.push(c);
+    }
+    if(!primed){ markSeen(primeKey); continue; }
+    for(var b=0;b<batch.length;b++){
+      try{ await (CH.attacks||ch).send(batch[b].msg); markSeen(batch[b].sig); }catch(err){ console.error('plog post:', err.message); }
+    }
+  }
+}
+
+/*VISITED-PAGES-V1*/
+var OUR_KD='3:4';
+var vpRoster={};
+var vpNicks={}; var vpNickTs=0;
+function vpParseRoster(txt){ var ros=String(txt||''); var i=ros.indexOf('Nobility'); if(i>=0)ros=ros.slice(i+8); var re=/(\d+)\s+(.+?)\s+\S+\s+[\d,]+\s+acres/g,m,n=0; while((m=re.exec(ros))){ var nm=m[2].replace(/\s*\((?:M|S)\)/g,'').replace(/\*/g,'').trim(); if(nm){ vpRoster[nm.toLowerCase()]=m[1]; n++; } } return n; }
+function vpSlot(prov){ return vpRoster[String(prov||'').toLowerCase().trim()]||''; }
+function vpHandle(prov){ try{ var k=String(prov||'').toLowerCase().trim(); if(vpNicks[k]) return vpNicks[k]; var e=links[k]; return (e&&e.handle)?e.handle:''; }catch(x){ return ''; } }
+function vpTag(prov){ prov=String(prov||'?'); var s=vpSlot(prov), h=vpHandle(prov); var b=(s?('#'+s+' '):'')+prov; return h?(h+' / '+b):b; }
+function vpWho(prov){ try{ var k=String(prov||'?').toLowerCase().trim(); if(vpNicks[k]) return vpNicks[k]; }catch(x){} return String(prov||'?'); }
+async function vpRefreshNicks(ch){
+  try{
+    if(vpNickTs && (Date.now()-vpNickTs)<300000) return;
+    var g=ch&&ch.guild; if(g==null) return;
+    var ks=Object.keys(links);
+    for(var i=0;i<ks.length;i++){
+      var e=links[ks[i]]; if(e==null||e.discord_id==null) continue;
+      try{ var mem=await g.members.fetch(e.discord_id); if(mem){ var dn=mem.displayName||(mem.user&&mem.user.username)||''; if(dn) vpNicks[ks[i]]=dn; } }catch(x){}
+    }
+    vpNickTs=Date.now();
+  }catch(x){}
+}
+var VPSPELLS=[[/extraordinarily fertile|made our lands.{0,20}fertile/i,'Fertile Lands'],[/drought and storms|blessed by nature/i,"Nature's Blessing"],[/unnatural speed|builders have been blessed/i,'Builders Boon'],[/dead will be awakened|awakened the next time/i,'Animate Dead'],[/shadowlight|identities will be revealed/i,'Shadow Light'],[/created \d+ acres more land|more land for us to use|acres more land/i,'Paradise'],[/smite attackers|magic will smite/i,'Wrath'],[/excited about the military|signup more quickly/i,'Patriotism'],[/inspired by our paladin|by our paladin/i,'Heroes Inspiration'],[/inspired to train/i,'Inspire Army'],[/surrounds our troops|reducing casualties/i,'Salvation'],[/holy shield|foul sorcery/i,'Divine Shield'],[/fanatical fervor/i,'Fanaticism'],[/auras within our province|black magic/i,'Magic Shield'],[/shades of anonymity|cloaked under the shades/i,'Anonymity'],[/magical calm|birth rates to be higher/i,'Love and Peace'],[/sphere of protection/i,'Minor Protection'],[/scientists are extraordinarily focused|science book generation/i,'Fountain of Knowledge'],[/drawn to the sciences/i,'Revelation']];
+function vpSpellName(eff){ eff=String(eff||''); for(var i=0;i<VPSPELLS.length;i++){ if(VPSPELLS[i][0].test(eff)) return VPSPELLS[i][1]; } return ''; }
+function vpCast(prov, txt){
+  prov=String(prov||'?');
+  var t=String(txt||'');
+  var m=t.match(/Your wizards gather ([\d,]+) runes and begin casting,?\s*(?:(?:and|but)\s+)?the spell (succeeds|fails|failed|is unsuccessful)\.?\s*([\s\S]{0,130}?)(?:\s{2,}|[\t\n]|$)/);
+  if(m==null) return null;
+  var runes=m[1]; var ok=/succeed/i.test(m[2]); var eff=(m[3]||'').replace(/\s+/g,' ').trim();
+  var seg=t.match(/Your wizards gather [\s\S]{0,280}?(?=\s*Select a spell|\s*Select your|\s*-{4,}|[\t\n]{2,}|$)/i);
+  var game=seg?seg[0].replace(/\s+/g,' ').trim():('Your wizards gather '+runes+' runes and begin casting, '+(ok?('and the spell succeeds. '+eff):'but the spell fails')).trim();
+  game=game.replace(/[\s.]+$/,'')+'.';
+  if(/ritual project/i.test(eff)) return {kind:'ritual', sig:'vp:rit:'+prov+':'+runes, msg:vpWho(prov)+' \u2014 Ritual: '+game};
+  var nm=vpSpellName(eff); var tag=nm?(' \u2014 '+nm):'';
+  return {kind:'spell', sig:'vp:spell:'+prov+':'+runes+':'+eff.slice(0,40), msg:vpWho(prov)+tag+': '+game};
+}
+/*VPATK1*/
+function vpParseOut(prov, body){
+  prov=String(prov||'?'); body=String(body||'');
+  var bounce=/driven back|unable to break through/i.test(body);
+  var hasResult=/this battle/i.test(body)||bounce;
+  if(hasResult===false) return null;
+  var tgtM=body.match(/Your forces arrive at (.+?)[.!]/i); var tgt=tgtM?tgtM[1].trim():'';
+  if(tgt===''){ var fM=body.match(/\(([^()]*\(\d+:\d+\)), sent/); if(fM) tgt=fM[1].trim(); }
+  var tgtTxt=tgt||'enemy';
+  var razed=(body.match(/razed ([\d,]+) acres of buildings/i)||[])[1];
+  var tookM=body.match(/captured ([\d,]+) acres of land/i)||body.match(/took ([\d,]+) acres/i); var took=tookM?tookM[1]:'';
+  if(bounce && razed==null && took===''){ return {kind:'atk', sig:'vp:o:'+prov+':'+tgtTxt+':bounce', msg:':crossed_swords: **'+vpTag(prov)+'** \u2192 '+tgtTxt+' \u2014 attack bounced, no land'}; }
+  var kills=(body.match(/killed about ([\d,]+) enemy troops/i)||[])[1]||'0';
+  var lossM=body.match(/We lost (.+?) in this battle/i); var loss=lossM?lossM[1].trim():'';
+  var pris=(body.match(/imprisoned ([\d,]+)/i)||[])[1];
+  var det=[];
+  if(razed) det.push('razed '+razed+' acres'); else if(took) det.push('took '+took+' acres');
+  det.push('killed '+kills);
+  if(loss) det.push('lost '+loss);
+  if(pris) det.push(pris+' prisoners');
+  return {kind:'atk', sig:'vp:o:'+prov+':'+tgtTxt+':'+(razed||took||kills)+':'+(pris||'0'), msg:':crossed_swords: **'+vpTag(prov)+'** \u2192 '+tgtTxt+' \u2014 '+det.join(' \u00b7 ')};
+}
+function vpParseAid(prov, body, url){
+  prov=String(prov||'?'); body=String(body||'');
+  var m=body.match(/We have sent ([\d,]+) (.+?) to (.+?)\s*\((\d+:\d+)\)/i);
+  if(m==null) return null;
+  var amt=m[1], res=m[2].replace(/\s+/g,' ').trim(), tgt=m[3].trim();
+  var seg=body.match(/We have sent [\s\S]{0,240}?(?=\s*Current trade|\s*Send Aid|\s*-{4,}|[\t\n]{2,}|$)/i);
+  var game=seg?seg[0].replace(/\s+/g,' ').trim():('We have sent '+amt+' '+res+' to '+tgt+' ('+m[4]+')');
+  game=game.replace(/[\s.]+$/,'')+'.';
+  var aidc=''; var _u=String(url||''); var _i=_u.indexOf('c='); if(_i>=0){ var _j=_i+2; while(_j<_u.length){ var _c=_u.charCodeAt(_j); if(_c<48||_c>57)break; aidc+=_u.charAt(_j); _j++; } } return {kind:'aid', sig:'vp:aid:'+prov.toLowerCase()+':'+tgt.toLowerCase()+':'+amt+':'+res.replace(/[^a-z]/gi,'').slice(0,12)+(aidc?(':'+aidc):''), msg:vpWho(prov)+': '+game};
+}
+function vpParseOp(prov, body, url){
+  prov=String(prov||'?'); body=String(body||''); url=String(url||'');
+  var om=url.match(/[?&]o=([A-Za-z_]+)/); if(om==null) return null;
+  var op=om[1].toLowerCase().split('_').map(function(w,wi){ if(wi>0 && /^(on|the|of|a|an|to|in|at|by|for|from)$/.test(w)) return w; return w?(w.charAt(0).toUpperCase()+w.slice(1)):w; }).join(' ');
+  var tm=body.match(/The Province of (.+?)\s*\((\d+:\d+)\)/i);
+  var tgt=tm?(tm[1].trim()+' ('+tm[2]+')'):'';
+  var dm=body.match(/(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d+\s+of\s+YR\d+/);
+  var dt=dm?dm[0].replace(/[^a-z0-9]/gi,''):'';
+  var qm=url.match(/[?&]q=(\d+)/); var sent=qm?qm[1].replace(/(\d)(?=(\d{3})+$)/g,'$1,'):'';
+  var fail=/unsuccessful|were caught|were captured|could not|failed to|we were unable|caught by|foiled|thwarted/i.test(body);
+  var mark=fail?'\u274c':'\u2705';
+  var lm=body.match(/we lost ([0-9,]+) thie/i); var lost=lm?lm[1]:''; var tail = fail ? (' \u00b7 foiled'+(lost?(' \u2014 lost '+lost+' thieves'):'')) : (sent?(' \u00b7 '+sent+' sent'):'');
+  return {kind:'op', sig:'vp:op:'+prov.toLowerCase()+':'+om[1].toLowerCase()+':'+(tm?tm[2]:'')+':'+dt, msg:mark+' '+vpWho(prov)+' \u2014 '+op+(tgt?(' \u2192 '+tgt):'')+tail};
+}
+function vpParseKdNews(txt, maxYR){
+  txt=String(txt||''); var out=[];
+  var re=/(?:\d+\s*-\s*)?([^()\n]+?)\s*\((\d+:\d+)\)\s+invaded\s+(?:\d+\s*-\s*)?([^()\n]+?)\s*\((\d+:\d+)\)\s+and\s+([^.!]+)[.!]\s*(?:(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d+\s+of\s+YR(\d+))?/gi;
+  var m;
+  while((m=re.exec(txt))){
+    var atk=m[1].replace(/^.*?\d+\s*-\s*/,'').trim(), atkloc=m[2], tgt=m[3].replace(/^.*?\d+\s*-\s*/,'').trim(), tgtloc=m[4], action=m[5].trim(), yr=parseInt(m[6]||'0',10);
+    if(maxYR && yr && yr<maxYR) continue;
+    if(tgtloc===OUR_KD && atkloc!==OUR_KD){
+      out.push({kind:'atk', sig:'vp:kn:'+tgt.toLowerCase()+':'+atk.toLowerCase()+':'+action.replace(/[^0-9a-z]/gi,'').slice(0,24), msg:':shield: **'+vpTag(tgt)+'** \u2190 '+atk+' ('+atkloc+') \u2014 '+action});
+    }
+  }
+  var lines=txt.split(/\n/);
+  for(var li=0; li<lines.length; li++){
+    var ln=lines[li];
+    var ym=ln.match(/of YR(\d+)/); var yr2=ym?parseInt(ym[1],10):0;
+    if(maxYR && yr2 && yr2<maxYR) continue;
+    var dm=ln.match(/(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d+\s+of\s+YR\d+/); var dt=dm?dm[0].replace(/[^a-z0-9]/gi,''):'';
+    var im=ln.match(/In intra-kingdom war\s+(?:\d+\s*-\s*)?(.+?)\s*\((\d+:\d+)\)\s+attempted to invade\s+(?:\d+\s*-\s*)?(.+?)\s*\((\d+:\d+)\),?\s*but failed/i);
+    if(im){ var ia=im[1].trim(), it=im[3].trim(); out.push({kind:'intra', sig:'vp:intra:'+ia.toLowerCase()+':'+it.toLowerCase()+':'+dt, msg:':crossed_swords: '+vpTag(ia)+' \u2192 '+vpTag(it)+' \u00b7 intra bounce (failed)'}); continue; }
+    var rm=ln.match(/(developing a ritual|ritual is covering)[^(]*\(([^)]+)\)/i);
+    if(rm){ var rn=rm[2].trim(); var rs=/developing/i.test(rm[1])?'started':'active'; out.push({kind:'ritualn', sig:'vp:ritn:'+rn.toLowerCase()+':'+rs+':'+dt, msg:':crystal_ball: '+rn+' \u00b7 ritual '+rs}); continue; }
+  }
+  return out;
+}
+function vpAttackAll(prov, txt, url, maxYR){
+  prov=String(prov||'?'); txt=String(txt||''); url=String(url||''); var out=[];
+  if(/game\/aid/.test(url) || /We have sent [\d,]+ .+? to .+?\(\d+:\d+\)/i.test(txt)){ var ha=vpParseAid(prov, txt, url); if(ha) out.push(ha); return out; }
+  if(/thievery/.test(url) && /[?&]o=/.test(url)){ var ho=vpParseOp(prov, txt, url); if(ho) out.push(ho); return out; }
+  if(/send_armies/.test(url) || /You enter your War Room/i.test(txt)){ var h=vpParseOut(prov, txt); if(h) out.push(h); return out; }
+  if(/kingdom_news|throne/.test(url)){ return vpParseKdNews(txt, maxYR); }
+  return out;
+}
+function vpFetchFeed(){
+  return new Promise(function(resolve){
+    require('http').get('http://localhost:8108/feed?key='+KEY+'&since=0', function(r){
+      var d=''; r.on('data',function(c){d+=c;}); r.on('end',function(){
+        try{ var j=JSON.parse(d); resolve(j.entries||(Array.isArray(j)?j:[])); }catch(e){ resolve([]); }
+      });
+    }).on('error', function(){ resolve([]); });
+  });
+}
+async function pollVisitedPages(ch, _feed){
+  var entries = _feed || await vpFetchFeed();
+  await vpRefreshNicks(ch);
+  var kd=entries.filter(function(e){return String(e.url||'').indexOf('kingdom_details')>=0;}).sort(function(a,b){return (b.ts||0)-(a.ts||0);})[0];
+  if(kd) vpParseRoster(kd.data_simple);
+  var maxYR=0; entries.forEach(function(e){ var mm=String(e.data_simple||'').match(/of YR(\d+)/g); if(mm) mm.forEach(function(x){ var y=parseInt(x.replace(/[^0-9]/g,''),10); if(y>maxYR) maxYR=y; }); });
+  var seen={}, hits=[];
+  entries.forEach(function(e){
+    var arr=[]; var c=vpCast(e.prov||'?', e.data_simple||'');
+    if(c){ c.sig=c.sig+':'+(e.ts||0); arr.push(c); } else arr=vpAttackAll(e.prov||'?', e.data_simple||'', e.url, maxYR);
+    arr.forEach(function(x){ if(x && seen[x.sig]==null){ seen[x.sig]=1; x.ts=e.ts||0; hits.push(x); } });
+  });
+  hits.sort(function(a,b){return (a.ts||0)-(b.ts||0);});
+  if(alreadyPosted('vp:atkprime2')===false){
+    hits.forEach(function(h){ if(h.kind==='atk') markSeen(h.sig); });
+    markSeen('vp:atkprime2');
+  }
+  if(alreadyPosted('vp:spellprime')===false){ hits.forEach(function(h){ if(h.kind==='spell'||h.kind==='ritual') markSeen(h.sig); }); markSeen('vp:spellprime'); }
+  var fresh=hits.filter(function(c){ return alreadyPosted(c.sig)===false; });
+  if(fresh.length===0) return;
+  if(alreadyPosted('vp:primed')===false){
+    markSeen('vp:primed');
+    var drop=fresh.slice(0, Math.max(0, fresh.length-8)); drop.forEach(function(c){ markSeen(c.sig); });
+    fresh=fresh.slice(-8);
+  }
+  if(alreadyPosted('vp:prime3')===false){
+    markSeen('vp:prime3');
+    if(fresh.length>12){ fresh.slice(0, fresh.length-12).forEach(function(c){ markSeen(c.sig); }); fresh=fresh.slice(-12); }
+  }
+  if(alreadyPosted('vp:prime4')===false){
+    markSeen('vp:prime4');
+    var opsF=fresh.filter(function(c){ return c.kind==='op'; }); var keepOps=opsF.slice(-6);
+    fresh=fresh.filter(function(c){ if(c.kind!=='op') return true; if(keepOps.indexOf(c)>=0) return true; markSeen(c.sig); return false; });
+  }
+  for(var i=0;i<fresh.length;i++){
+    try{ await (chFor(fresh[i].kind)||ch).send(fresh[i].msg); markSeen(fresh[i].sig); }
+    catch(err){ console.error('vp:', err.message); }
+  }
+}
+
+
+function readWarlogEv(){ try{ const d=JSON.parse(fs.readFileSync('/root/warroom/state.json','utf8')); return (d.warlog&&d.warlog.ev)||{}; }catch(e){ return {}; } }
+const WL_MO={january:1,february:2,march:3,april:4,may:5,june:6,july:7};
+function wlDateKey(x){ const m=String(x||'').match(/([A-Za-z]+)\s+(\d+)\s+of\s+YR(\d+)/i); if(!m) return 0; return Number(m[3])*10000+(WL_MO[m[1].toLowerCase()]||0)*40+Number(m[2]); }
+const WL_LABEL={'trad march':'TRAD MARCH',conquest:'CONQUEST',ambush:'AMBUSH',raze:'RAZE',massacre:'MASSACRE',plunder:'PLUNDER',failed:'BOUNCE'};
+function fmtWarAttack(e){ const lab=WL_LABEL[e.type]||String(e.type||'').toUpperCase(); const A=(e.atk&&e.atk.name)||'someone'; const D=(e.def&&e.def.name)||'someone'; let det=''; if(e.unit==='land'&&e.amt) det=Number(e.amt).toLocaleString()+' acres'; else if(e.unit==='ppl'&&e.amt) det=Number(e.amt).toLocaleString()+' killed'; return ':crossed_swords: **'+lab+'** \u00b7 '+A+' \u2192 '+D+(det?' \u2014 '+det:'')+(e.date?'  _'+String(e.date).replace(' of YR',' YR')+'_':''); }
+const WL_PRIMED='__WARLOG_PRIMED__';
+async function pollWarAttacks(ch){ const wl=readWarlogEv(); const sigs=Object.keys(wl); if(!sigs.length) return; if(!alreadyPosted(WL_PRIMED)){ sigs.forEach(function(x){markSeen(x);}); markSeen(WL_PRIMED); return; } const toPost=sigs.filter(function(x){return !alreadyPosted(x);}).map(function(x){return Object.assign({_sig:x},wl[x]);}); toPost.sort(function(a,b){return wlDateKey(a.date)-wlDateKey(b.date);}); for(const e of toPost){ const msg=fmtWarAttack(e); try{ await ch.send(msg); markSeen(e._sig); }catch(err){ console.error('waratk post:',err.message); } } }
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
+let CH = {}; let chDefault = null;
+function chFor(kind){ if(kind==='op') return CH.ops||chDefault; if(kind==='ritual') return CH.ritual||chDefault; if(kind==='aid') return CH.aid||chDefault; if(kind==='spell') return CH.selfspells||chDefault; if(kind==='atk'||kind==='attack'||kind==='ceasefire') return CH.attacks||chDefault; return chDefault; }
 client.once('clientReady', async () => {
   console.log('BOT online as ' + client.user.tag);
   try {
@@ -489,6 +839,8 @@ client.once('clientReady', async () => {
     console.log('slash commands registered');
   } catch(e) { console.error('cmd register fail:', e.message); }
   const ch = await client.channels.fetch(process.env.CH_BOTTEST);
+  chDefault = ch;
+  try { const g = await client.guilds.fetch(process.env.GUILD_ID); const allCh = await g.channels.fetch(); const byName = (nm)=>allCh.find(c=>c&&c.name===nm)||null; CH = { ops:byName('bot-thieve-ops'), ritual:byName('bot-ritual'), dragon:byName('bot-dragon'), spells:byName('bot-spells'), aid:byName('bot-aid'), selfspells:byName('bot-selfspells'), attacks:byName('bot-attacks') }; console.log('CHANNELS: '+Object.keys(CH).map(k=>k+'='+(CH[k]?'ok':'MISS')).join(' ')); } catch(e) { console.error('channel map fail:', e.message); }
   const prime = await fetchFeed();
   if (prime && prime.cursor) { cursor = prime.cursor; console.log('cursor primed at ' + cursor); }
   async function poll() {
@@ -497,12 +849,12 @@ client.once('clientReady', async () => {
       for (const en of feed.entries) {
         for (const ev of parser.parse(en.data_simple||'')) {
           let msg = null;
-          if (ev.kind==='attack') msg = fmtAttack(ev);
+          if (ev.kind==='attack') continue;
           else if (ev.kind==='ceasefire') msg = fmtWar(ev);
           if (msg) {
             const key = (ev._date||'') + '|' + ev.kind + '|' + (ev.attacker||'') + '|' + (ev.target||'') + '|' + (ev.acres||ev.killed||ev.amount||'') + '|' + (ev.type||'');
             if (alreadyPosted(key)) continue;
-            try { await ch.send(msg); markSeen(key); if(ev.kind==='attack') await dmAttacked(client, ev); } catch(e) { console.error('post fail:', e.message); }
+            try { await (CH.attacks||ch).send(msg); markSeen(key);  } catch(e) { console.error('post fail:', e.message); }
           }
         }
       }
@@ -510,13 +862,16 @@ client.once('clientReady', async () => {
     }
   }
   setInterval(poll, 8000);
-  setInterval(()=>{ checkArmyReturns(client).catch(e=>console.error('army check:', e.message)); }, 60000);
-  setInterval(()=>{ checkTickDM(client).catch(e=>console.error('tick dm:', e.message)); }, 30000);
+  var plogBusy=false; setInterval(function(){ if(plogBusy)return; plogBusy=true; pollVisitedPages(ch).catch(function(e){console.error('plog:',e.message);}).finally(function(){plogBusy=false;}); }, 2000);
+  /* pollWarAttacks DISABLED - was flooding; province-log poster handles attacks now */
+  setInterval(()=>{ if(false) checkArmyReturns(client).catch(e=>console.error('army check:', e.message)); }, 60000);
+  setInterval(()=>{ if(false) checkTickDM(client).catch(e=>console.error('tick dm:', e.message)); }, 30000);
   console.log('feed polling started (8s)');
 });
 
 client.on('interactionCreate', async (i) => {
   if (!i.isChatInputCommand()) return;
+  if (i.commandName === `spells`) { /*SPELLS-V4*/ await i.deferReply(); const pname = await resolveProvName(i, i.options.getString(`name`)); if(!pname){ await i.editReply(`Give a province name, or link one with /link.`); return; } const feed = await httpGet(`/feed?key=` + KEY + `&since=0`); const pg = freshestPage(feed, pname, `/throne`); if(!pg){ await i.editReply(`No throne page for ` + pname + ` yet. Open its throne page in-game.`); return; } const sp = spellsFromThrone(pg.data_simple || ``); if(!sp.length){ await i.editReply(`No active spells on ` + pname + `.`); return; } const NB=[`meteor`,`greed`,`fool`,`gluttony`,`pitfall`,`explosion`,`amnesia`,`nightmare`,`vortex`,`tornado`,`lightning`,`fireball`,`land lust`,`storm`,`drought`,`vermin`,`chastity`,`expose`,`exposure`]; sp.forEach(function(sx){ const nl=String(sx.name||``).toLowerCase(); sx.bad=false; for(let b=0;b<NB.length;b++){ if(nl.indexOf(NB[b])>=0){ sx.bad=true; break; } } }); const L = [`__**` + pname + `** - Active Spells__`]; const fmt=sx=>sx.name + ` (` + sx.days + `d)`; const up = sp.filter(sx=>!sx.bad).map(fmt); const bad = sp.filter(sx=>sx.bad).map(fmt); if(up.length) L.push(`:green_circle: **Up:** ` + up.join(`, `)); if(bad.length) L.push(`:red_circle: **Hostile:** ` + bad.join(`, `)); await i.editReply(L.join(String.fromCharCode(10))); return; }
   const state = await fetchState();
   if (!state) { await i.reply('Could not reach server.'); return; }
   if (i.commandName === 'prov') {
@@ -611,8 +966,21 @@ client.on('interactionCreate', async (i) => {
   } else if (i.commandName === 'fat') {
     const r = fatCard(state, i.options.getString('kd'));
     await i.reply(r || 'KD not found.');
+  } else if (i.commandName === 'board') {
+    let off = i.options.getInteger('off');
+    if(!off){ const lk=findLinkByUser(i.user.id); if(lk&&lk.prov){ const h=findProv(state, lk.prov); if(h) off = Number(h.p.offense||(h.p.intel||{}).offHome||0)||0; } }
+    const r = boardCard(state, off, i.options.getString('kd'));
+    await i.reply(r || 'No enemy KD found.');
+  } else if (i.commandName === 'kdtpa') {
+    await i.reply(kdMagicCard(state, i.options.getString('kd'), 'tpa') || 'No KD found.');
+  } else if (i.commandName === 'kdwpa') {
+    await i.reply(kdMagicCard(state, i.options.getString('kd'), 'wpa') || 'No KD found.');
+  } else if (i.commandName === 'stealth') {
+    await i.reply(myResourceCard(state, 'stealth') || 'No KD data.');
+  } else if (i.commandName === 'mana') {
+    await i.reply(myResourceCard(state, 'mana') || 'No KD data.');
   } else if (i.commandName === 'left') {
-    await i.reply(leftCard(state, i.options.getString('name')));
+    await i.deferReply(); const typed = i.options.getString('name'); const pname = typed ? await resolveProvName(i, typed) : typed; await i.editReply(leftCard(state, pname));
   } else if (i.commandName === 'find') {
     await i.reply(findCard(state, i.options.getString('text')));
   } else if (i.commandName === 'link') {
@@ -631,9 +999,9 @@ client.on('interactionCreate', async (i) => {
     if (!existing) { await i.reply('You have no linked province.'); return; }
     delete links[existing.key]; saveLinks();
     await i.reply(':white_check_mark: Unlinked you from **' + existing.prov + '**.');
-  } else if (i.commandName === 'links') {
+  } else if (i.commandName === 'links') { await i.deferReply();
     const keys = Object.keys(links);
-    if (!keys.length) { await i.reply('No provinces linked yet. Use /link <province>.'); return; }
+    if (!keys.length) { await i.editReply('No provinces linked yet. Use /link <province>.'); return; }
     const L = ['__**Linked provinces (' + keys.length + ')**__'];
     keys.forEach(k => L.push('**' + links[k].prov + '** → <@' + links[k].discord_id + '>'));
     await i.editReply(L.join('\n'));
