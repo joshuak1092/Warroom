@@ -1036,6 +1036,9 @@ function enemyIntelHtml(p){
     const units=Object.keys(T).filter(k=>!skip[k]);
     if(units.length)h+='<div style="margin-top:4px"><span class="note">Units: </span>'+units.map(u=>esc(u)+" <b>"+esc(T[u])+"</b>").join(" · ")+'</div>';
   }
+  if(it.thieves)h+='<div class="note" style="margin-top:4px">🥷 Thieves: '+f(it.thieves)+(p.tpa?" · TPA "+fmt1(p.tpa):"")+'</div>';
+  if(it.ome!=null||it.dme!=null||it.defSpecs!=null){const mil=[];if(it.ome!=null)mil.push("OME "+it.ome+"%");if(it.dme!=null)mil.push("DME "+it.dme+"%");if(it.soldiers!=null)mil.push("Sol "+f(it.soldiers));if(it.offSpecs!=null)mil.push("OSpec "+f(it.offSpecs));if(it.defSpecs!=null)mil.push("DSpec "+f(it.defSpecs));if(it.elites!=null)mil.push("Elite "+f(it.elites));if(it.warHorses!=null)mil.push("WH "+f(it.warHorses));h+='<div class="lr-stats" style="margin-top:4px">'+mil.map(x=>"<span>"+x+"</span>").join("")+'</div>';}
+  if(it.science&&it.science.length)h+='<div style="margin-top:4px;line-height:1.8"><span class="note">📚 Science: </span>'+it.science.map(s=>esc(s.name)+" <b>"+(s.effect>=0?"+":"")+s.effect+"%</b>").join(" · ")+'</div>';
   const fl=[];
   if(it.ritual)fl.push("✴ "+esc(it.ritual.name)+" "+it.ritual.eff+"% ("+it.ritual.days+"d)");
   if(it.plague)fl.push("☣ Plague");

@@ -58,7 +58,7 @@ module.exports = {
     let loc = null, m;
     if ((m = t.match(/Target kingdom is .+?\((\d+:\d+)\)/i))) loc = m[1];
     if (!loc && (m = t.match(/The Province of .+?\((\d+:\d+)\)/i))) loc = m[1];
-    if (!loc && (m = t.match(/(?:military ranks of|exploration activities of) .+?\((\d+:\d+)\)/i))) loc = m[1];
+    if (!loc && (m = t.match(/(?:military ranks of|exploration activities of|Thieves'? Guilds? of|research centers of|Military Elders of) .+?\((\d+:\d+)\)/i))) loc = m[1];
     if (!loc || loc === (ctx.ourLoc || "")) return;
     const kd = findEnemyKd(d, loc); if (!kd) return;
 
@@ -67,11 +67,14 @@ module.exports = {
     if ((m = t.match(/The Province of (.+?)\s*\(\d+:\d+\)/i))) name = m[1].trim();
     else if ((m = t.match(/military ranks of (.+?)\s*\(\d+:\d+\)/i))) name = m[1].trim();
     else if ((m = t.match(/exploration activities of (.+?)\s*\(\d+:\d+\)/i))) name = m[1].trim();
+    else if ((m = t.match(/Thieves'? Guilds? of (.+?)\s*\(\d+:\d+\)/i))) name = m[1].trim();
+    else if ((m = t.match(/research centers of (.+?)\s*\(\d+:\d+\)/i))) name = m[1].trim();
+    else if ((m = t.match(/Military Elders of (.+?)\s*\(\d+:\d+\)/i))) name = m[1].trim();
     else if ((m = t.match(/Select province:\s*\d*\s*(.+?)\s*(?:---|\(|\n|\r|$)/))) name = m[1].trim();
     if (!name) return;
 
     let p = findProv(kd, name);
-    const cleanProse = /The Province of|military ranks of|exploration activities of/i.test(t);
+    const cleanProse = /The Province of|military ranks of|exploration activities of|Thieves'? Guilds? of|research centers of|Military Elders of/i.test(t);
     if (!p) {
       if (!cleanProse) return;
       p = { id: now.toString(36) + Math.abs(name.charCodeAt(0) || 65).toString(36), name: name, race: "", pers: "", land: 0, nw: 0 };
@@ -123,9 +126,53 @@ module.exports = {
       if (em) p.incomingLand = N(em[1]);
       if (!p.intelType) p.intelType = "exploration";
     }
+    // INFILTRATE THIEVES' GUILD -> enemy thieves count + TPA
+    else if (/Thieves'? Guild/i.test(t)) {
+      const thm = t.match(/about ([\d,]+) thieves/i) || t.match(/([\d,]+) thieves employed/i);
+      if (thm) {
+        const thieves = N(thm[1]);
+        if (thieves != null) {
+          intel.thieves = thieves;
+          const L = p.land || 0;
+          if (L) p.tpa = Math.round(thieves / L * 100) / 100;
+        }
+      }
+      if (p.intelType !== "throne") p.intelType = "guild";
+      intel.guildTs = ts;
+    }
+    // SPY ON SCIENCES -> enemy science (books + effect per category)
+    else if (/research centers of|Current Effects of Science/i.test(t)) {
+      const list = [], rx = /([A-Za-z]+)\s+([\d,]+)\s+([+-][\d.]+)%\s*([^\n\r]*)/g; let sm;
+      while ((sm = rx.exec(t)) !== null) {
+        const desc = (sm[4] || "").trim();
+        if (/scientist|generation|available|per acre|book/i.test(desc)) continue;
+        list.push({ name: sm[1], books: N(sm[2]), effect: parseFloat(sm[3]), desc: desc });
+      }
+      if (list.length) intel.science = list;
+      if (p.intelType !== "throne") p.intelType = "science";
+      intel.sciTs = ts;
+    }
+    // SPY ON MILITARY -> at-home off/def, effectiveness, specialist mix, armies out
+    else if (/Military Elders of|Net (Offensive|Defensive) Points at Home/i.test(t)) {
+      const off = (m = t.match(/Net Offensive Points at Home\s+([\d,]+)/i)) ? N(m[1]) : null;
+      const df = (m = t.match(/Net Defensive Points at Home\s+([\d,]+)/i)) ? N(m[1]) : null;
+      if (off != null) { p.offense = off; intel.offHome = off; }
+      if (df != null) { p.defense = df; intel.defHome = df; }
+      if ((m = t.match(/Offensive Military Effectiveness\s+(?:is\s+)?([\d.]+)%/i))) intel.ome = parseFloat(m[1]);
+      if ((m = t.match(/Defensive Military Effectiveness\s+(?:is\s+)?([\d.]+)%/i))) intel.dme = parseFloat(m[1]);
+      if ((m = t.match(/([\d,]+) soldiers, ([\d,]+) offensive specialists, ([\d,]+) defensive specialists, ([\d,]+) elites and ([\d,]+) war horses/i))) {
+        intel.soldiers = N(m[1]); intel.offSpecs = N(m[2]); intel.defSpecs = N(m[3]); intel.elites = N(m[4]); intel.warHorses = N(m[5]);
+      }
+      const days = []; let dm2, drx = /\(([\d.]+)\s*days?\s*left\)/gi; while ((dm2 = drx.exec(t)) !== null) days.push(parseFloat(dm2[1]));
+      const cl = t.match(/Captured Land\s+([-\d,\t ]+)/i);
+      let inc = 0; if (cl) (cl[1].match(/[\d,]+/g) || []).forEach(x => inc += (N(x) || 0));
+      if (days.length) { p.armyOut = true; p.incomingLand = inc; intel.armyReturnDays = days; }
+      if (p.intelType !== "throne") p.intelType = "military";
+      intel.milTs = ts;
+    }
     // Ops we don't yet have a sample format for — stash the raw result so the data
     // is RECORDED (not lost) and can be parsed once a real page is captured.
-    else if (/SPY_ON_MILITARY|SPY_ON_SCIENCE|SURVEY|INFILTRATE|GUILD/i.test(op)) {
+    else if (/SURVEY/i.test(op)) {
       const pend = intel.pending || (intel.pending = {});
       pend[op] = { ts: ts, text: t.slice(0, 1500) };
     }
