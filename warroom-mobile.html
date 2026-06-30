@@ -1011,6 +1011,43 @@ let quickType="march";  // attack type used by tap-to-assign
 let selTgt=null;
 let starOnly=false;  // show only starred (My Targets) provs in Enemy Kingdom list
 let expProv=null;   // expanded enemy card
+// Full enemy intel panel (shown when a province row is expanded). Renders everything
+// scouted: throne (off/def/land/nw/pop/econ/units), ritual/plague/war flags, and the
+// sabotage/thievery op log. Always shows the core stats; deep fields appear when spied.
+function enemyIntelHtml(p){
+  const it=p.intel||{}, T=it.throne||null, f=n=>fmtK(num(n));
+  const age=ts=>{ if(!ts)return ""; const s=(Date.now()-ts)/1000; return s<3600?Math.round(s/60)+"m":s<86400?Math.round(s/3600)+"h":Math.round(s/86400)+"d"; };
+  const src=p.intelType==="throne"?"Throne spy":p.intelType==="defense"?"Defense spy":p.intelType==="exploration"?"Exploration spy":"Intel";
+  let h='<div style="margin-top:4px;padding:8px 10px;background:var(--bg2);border-radius:7px;font-size:12px">';
+  if(p.lastScout||p.intelType) h+='<div class="note" style="margin-bottom:6px">🔎 '+src+(p.lastScout?" · "+age(p.lastScout)+" ago":"")+(it.throneDate?" · as of "+esc(it.throneDate):"")+'</div>';
+  h+='<div class="lr-stats"><span>OFF <b>'+(p.offense?f(p.offense):"?")+'</b></span><span>DEF <b>'+(p.defense?f(p.defense):"?")+'</b></span><span>Land <b>'+(p.land?f(p.land):"?")+'</b></span><span>NW <b>'+(p.nw?f(p.nw):"?")+'</b></span><span>Pop <b>'+(p.pop?f(p.pop):"?")+'</b></span></div>';
+  if(T){
+    const e=[];
+    if(T["Building Eff."]!=null)e.push("BE "+esc(T["Building Eff."]));
+    if(T["Money"]!=null)e.push("GC "+esc(T["Money"]));
+    if(T["Food"]!=null)e.push("Food "+esc(T["Food"]));
+    if(T["Runes"]!=null)e.push("Runes "+esc(T["Runes"]));
+    if(T["War Horses"]!=null)e.push("WarHorses "+esc(T["War Horses"]));
+    if(T["Prisoners"]!=null)e.push("Pris "+esc(T["Prisoners"]));
+    if(T["Trade Balance"]!=null)e.push("TB "+esc(T["Trade Balance"]));
+    if(e.length)h+='<div class="lr-stats" style="margin-top:4px">'+e.map(x=>"<span>"+x+"</span>").join("")+'</div>';
+    if(p.ruler)h+='<div class="note" style="margin-top:4px">Ruler: '+esc(p.ruler)+'</div>';
+    const skip={"Race":1,"Ruler":1,"Land":1,"Peasants":1,"Building Eff.":1,"Money":1,"Food":1,"Runes":1,"Trade Balance":1,"Networth":1,"Off. Points":1,"Def. Points":1,"War Horses":1,"Prisoners":1,"Thieves":1,"Wizards":1};
+    const units=Object.keys(T).filter(k=>!skip[k]);
+    if(units.length)h+='<div style="margin-top:4px"><span class="note">Units: </span>'+units.map(u=>esc(u)+" <b>"+esc(T[u])+"</b>").join(" · ")+'</div>';
+  }
+  const fl=[];
+  if(it.ritual)fl.push("✴ "+esc(it.ritual.name)+" "+it.ritual.eff+"% ("+it.ritual.days+"d)");
+  if(it.plague)fl.push("☣ Plague");
+  if(it.warWith)fl.push("⚔ war vs "+esc(it.warWith.name));
+  if(fl.length)h+='<div class="note" style="margin-top:4px">'+fl.join(" · ")+'</div>';
+  h+='<div class="lr-stats" style="margin-top:4px"><span>mdTPA <b>'+(p.mdtpa!=null&&p.mdtpa!==""?fmt1(p.mdtpa):"?")+'</b></span><span>mdWPA <b>'+(p.mdwpa!=null&&p.mdwpa!==""?fmt1(p.mdwpa):"?")+'</b></span><span>Honor <b>'+(p.honor?f(p.honor):"?")+'</b></span><span>Gens out <b>'+(p.generalsUsed||0)+'</b></span></div>';
+  if(p.ops&&p.ops.length){
+    const last=p.ops.slice(-6).reverse();
+    h+='<div style="margin-top:6px"><span class="note">⚙ Ops: </span>'+last.map(o=>esc((o.op||"").replace(/_/g," ").toLowerCase())+(o.detail?" ("+esc(o.detail)+")":"")).join(" · ")+'</div>';
+  }
+  return h+'</div>';
+}
 let mySort="default";   // sort for My Kingdom panel
 let enSort="default";   // sort for Enemy Kingdom panel
 function isTM(p){ return num(p.offense)<=0 || num(p.offense) < num(p.defense)*0.15; }  // all-def / no-off province
@@ -1391,13 +1428,7 @@ function enemyTable(e){
     const tpa = p.tpa!=null&&p.tpa!==""?fmt1(p.tpa):"?";
     const wpa = p.wpa!=null&&p.wpa!==""?fmt1(p.wpa):"?";
     const cast=p.sci&&p.sci.cast!=null?p.sci.cast:null, wts=p.sci&&p.sci.wts!=null?p.sci.wts:null;
-    const exp = expProv===p.id ? `<div class="lr-stats" style="margin-top:4px;padding:6px 8px;background:var(--bg2);border-radius:7px">
-      <span>OFF <b>${p.offense?fmtK(p.offense):"?"}</b></span>
-      <span>mdTPA <b>${p.mdtpa!=null&&p.mdtpa!==""?fmt1(p.mdtpa):"?"}</b></span>
-      <span>mdWPA <b>${p.mdwpa!=null&&p.mdwpa!==""?fmt1(p.mdwpa):"?"}</b></span>
-      <span>Pop <b>${p.pop?fmtK(p.pop):"?"}</b></span>
-      <span>Honor <b>${p.honor?fmtK(p.honor):"?"}</b></span>
-      <span>Gens out <b>${p.generalsUsed||0}</b></span></div>` : "";
+    const exp = expProv===p.id ? enemyIntelHtml(p) : "";
     const asg = assigned.length ? `<div class="asgs" style="margin-top:6px">${assigned.map(w=>{
         const d=deriveAttack(e,w); const cls=w.cat==="tm"?"":(d.willBreak?"brk":"fail");
         const a2=STATE.myKd.provinces.find(x=>x.id===w.attacker);
