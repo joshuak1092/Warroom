@@ -46,7 +46,7 @@ function kvMap(block) {
 module.exports = {
   name: "scout",
   scope: "kingdom",
-  match: u => /\/(thievery|sorcery)/i.test("" + u),
+  match: u => /\/(thievery|sorcery|province_operations)/i.test("" + u),
   parse: (t, ctx) => {
     const d = ctx && ctx.d; if (!d) return;
     t = "" + (t || "");
@@ -58,7 +58,7 @@ module.exports = {
     let loc = null, m;
     if ((m = t.match(/Target kingdom is .+?\((\d+:\d+)\)/i))) loc = m[1];
     if (!loc && (m = t.match(/The Province of .+?\((\d+:\d+)\)/i))) loc = m[1];
-    if (!loc && (m = t.match(/(?:military ranks of|exploration activities of|Thieves'? Guilds? of|research centers of|Military Elders of) .+?\((\d+:\d+)\)/i))) loc = m[1];
+    if (!loc && (m = t.match(/(?:military ranks of|exploration activities of|Thieves'? Guilds? of|research centers of|Military Elders of|scour the lands of) .+?\((\d+:\d+)\)/i))) loc = m[1];
     if (!loc || loc === (ctx.ourLoc || "")) return;
     const kd = findEnemyKd(d, loc); if (!kd) return;
 
@@ -70,11 +70,12 @@ module.exports = {
     else if ((m = t.match(/Thieves'? Guilds? of (.+?)\s*\(\d+:\d+\)/i))) name = m[1].trim();
     else if ((m = t.match(/research centers of (.+?)\s*\(\d+:\d+\)/i))) name = m[1].trim();
     else if ((m = t.match(/Military Elders of (.+?)\s*\(\d+:\d+\)/i))) name = m[1].trim();
+    else if ((m = t.match(/scour the lands of (.+?)\s*\(\d+:\d+\)/i))) name = m[1].trim();
     else if ((m = t.match(/Select province:\s*\d*\s*(.+?)\s*(?:---|\(|\n|\r|$)/))) name = m[1].trim();
     if (!name) return;
 
     let p = findProv(kd, name);
-    const cleanProse = /The Province of|military ranks of|exploration activities of|Thieves'? Guilds? of|research centers of|Military Elders of/i.test(t);
+    const cleanProse = /The Province of|military ranks of|exploration activities of|Thieves'? Guilds? of|research centers of|Military Elders of|scour the lands of/i.test(t);
     if (!p) {
       if (!cleanProse) return;
       p = { id: now.toString(36) + Math.abs(name.charCodeAt(0) || 65).toString(36), name: name, race: "", pers: "", land: 0, nw: 0 };
@@ -142,7 +143,7 @@ module.exports = {
     }
     // SPY ON SCIENCES -> enemy science (books + effect per category)
     else if (/research centers of|Current Effects of Science/i.test(t)) {
-      const list = [], rx = /([A-Za-z]+)\s+([\d,]+)\s+([+-][\d.]+)%\s*([^\n\r]*)/g; let sm;
+      const list = [], rx = /([A-Za-z]+)\s+([\d,]+)\s+([+-]?[\d.]+)%\s*([^\n\r]*)/g; let sm;
       while ((sm = rx.exec(t)) !== null) {
         const desc = (sm[4] || "").trim();
         if (/scientist|generation|available|per acre|book/i.test(desc)) continue;
@@ -170,11 +171,35 @@ module.exports = {
       if (p.intelType !== "throne") p.intelType = "military";
       intel.milTs = ts;
     }
-    // Ops we don't yet have a sample format for — stash the raw result so the data
-    // is RECORDED (not lost) and can be parsed once a real page is captured.
-    else if (/SURVEY/i.test(op)) {
-      const pend = intel.pending || (intel.pending = {});
-      pend[op] = { ts: ts, text: t.slice(0, 1500) };
+    // SURVEY -> enemy building distribution (quantity + % of land per type)
+    else if (/SURVEY/i.test(op) || /scour the lands of/i.test(t)) {
+      // First table only: "Building type  Quantity  % of Total ..." up to the
+      // "Exploration/Construction Schedules" grid (same names, no quantities).
+      let bi = t.search(/Building type\s+Quantity/i);
+      let be = t.search(/Exploration\/Construction Schedules|Schedule \(number of days\)/i);
+      if (bi < 0) bi = 0;
+      if (be < 0 || be < bi) be = t.length;
+      const builds = [];
+      t.slice(bi, be).split(/\n/).forEach(line => {
+        const c = line.split(/\t/).map(x => x.trim());
+        if (c.length < 3) return;
+        if (!/^[A-Za-z][A-Za-z'’ ]*$/.test(c[0])) return;       // building name
+        if (!/^[\d,]+$/.test(c[1])) return;                      // quantity
+        const pm = ("" + c[2]).match(/^([\d.]+)%$/);             // % of total land
+        if (!pm) return;
+        builds.push({ name: c[0], qty: N(c[1]), pct: parseFloat(pm[1]) });
+      });
+      if (builds.length) {
+        const total = builds.reduce((s, b) => s + (b.qty || 0), 0);
+        const stats = {}; let sv;
+        if ((sv = t.match(/Available Workers\s+([\d,]+)/i))) stats.workers = N(sv[1]);
+        if ((sv = t.match(/Available Jobs\s+([\d,]+)/i))) stats.jobs = N(sv[1]);
+        if ((sv = t.match(/Building Efficiency\s+([\d.]+)%/i))) stats.buildEff = parseFloat(sv[1]);
+        if ((sv = t.match(/Workers Needed for Max\.? Efficiency\s+([\d,]+)/i))) stats.workersNeeded = N(sv[1]);
+        intel.survey = { ts: ts, buildings: builds, total: total, stats: stats };
+        if (total > 0) p.land = total;
+        if (p.intelType !== "throne") p.intelType = "survey";
+      }
     }
     // Sabotage / resource ops -> op log (future "ops" view, alongside spells)
     else {
