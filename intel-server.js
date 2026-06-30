@@ -3,6 +3,7 @@
 const http=require("http"), fs=require("fs"), qs=require("querystring"), path=require("path");
 const PORT=process.env.PORT||process.argv[2]||8108, KEY=process.env.INTEL_KEY||process.argv[3]||"", SITEPASS=process.argv[4]||"";
 const LOG="intel-log.json", STATE_FILE="state.json", BACKUP_DIR="state-backups";
+const SHF=__dirname+"/stat-history.jsonl"; /* engine war snapshots (per-tick, while a confirmed war is open) */
 const SERVER_VERSION=/*VER-MTIME*/"3.5-nosync-"+new Date().toISOString().slice(0,10)+"-"+(function(){try{var _f=require("fs");return Math.round(Math.max(_f.statSync(__dirname+"/warroom.html").mtimeMs,_f.statSync(__dirname+"/warroom-mobile.html").mtimeMs)).toString(36);}catch(_e){return Date.now().toString(36);}})();
 if(!fs.existsSync(BACKUP_DIR)){ try{ fs.mkdirSync(BACKUP_DIR); }catch(e){} }
 function readState(){ try{ return JSON.parse(fs.readFileSync(STATE_FILE,"utf8")); }catch(e){ return {myKd:{name:"",loc:"",provinces:[]},enemies:{},activeEnemy:null,settings:{}}; } }
@@ -109,6 +110,7 @@ http.createServer((req,res)=>{
         res.writeHead(200,{"Content-Type":"application/json"}); return res.end(JSON.stringify({success:true,bytes:html.length}));
       }
       if(u.pathname==="/state"){ res.writeHead(410,{"Content-Type":"application/json"}); return res.end('{"error":"auto-push disabled — use Save to Server button (/save)"}'); }
+      if(/genesis|\/gen\//i.test((p.url||"")+"")){ res.writeHead(200,{"Content-Type":"application/json"}); return res.end('{"success":true,"skipped":"genesis"}'); } /*GENESIS-FRONTDOOR-BLOCK*/
       entries.push({id:nextId++, ts:Date.now(), url:p.url||"", prov:p.prov||"", data_simple:p.data_simple||"" });
       if(entries.length>2000) entries=entries.slice(-1500);
       persist(); broadcast("feed");
@@ -136,6 +138,19 @@ http.createServer((req,res)=>{
         if(err){ res.writeHead(200,{"Content-Type":"application/json"}); return res.end(payload); }
         res.writeHead(200,{"Content-Type":"application/json","Content-Encoding":"gzip","Vary":"Accept-Encoding"}); res.end(buf);
       });
+    }
+    res.writeHead(200,{"Content-Type":"application/json"}); return res.end(payload);
+  }
+  if(req.method==="GET" && u.pathname==="/warhistory"){
+    if(!authRead(u.searchParams.get("key")||"")){ res.writeHead(403,{"Content-Type":"application/json"}); return res.end(JSON.stringify({error:"bad key"})); }
+    const id=u.searchParams.get("id"); let recs=[];
+    try{ const raw=fs.readFileSync(SHF,"utf8").split("\n");
+      for(const line of raw){ const ln=line.trim(); if(!ln) continue; let r; try{ r=JSON.parse(ln); }catch(_){ continue; } if(id==null||String(r.war)===String(id)) recs.push(r); }
+    }catch(e){ /* file may not exist yet -> empty history */ }
+    if(recs.length>4000) recs=recs.slice(-4000); /* cap payload */
+    const payload=JSON.stringify({war:(id==null?null:id), count:recs.length, snapshots:recs});
+    if(/\bgzip\b/.test(String(req.headers["accept-encoding"]||""))){
+      return require("zlib").gzip(payload,(err,buf)=>{ if(err){ res.writeHead(200,{"Content-Type":"application/json"}); return res.end(payload); } res.writeHead(200,{"Content-Type":"application/json","Content-Encoding":"gzip","Vary":"Accept-Encoding"}); res.end(buf); });
     }
     res.writeHead(200,{"Content-Type":"application/json"}); return res.end(payload);
   }

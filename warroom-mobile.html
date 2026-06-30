@@ -21,12 +21,12 @@
   --sh:0 1px 2px rgba(0,0,0,.5), 0 8px 24px -10px rgba(0,0,0,.7);
   --sh2:0 2px 8px rgba(0,0,0,.6), 0 18px 44px -16px rgba(0,0,0,.8);
   /* ── mobile density knobs (drive MOBILE-FIRST OVERRIDES; one source of truth) ── */
-  --d-font:15px;   /* base body / control font */
-  --d-pad:12px;    /* view + topbar inner padding */
-  --d-gap:8px;     /* grid / sumbar gaps */
-  --d-row:11px;    /* list row vertical padding */
-  --d-radius:10px; /* override-block corner radius */
-  --d-tap:34px;    /* min interactive height — keep >=32px */
+  --d-font:14px;   /* base body / control font */
+  --d-pad:10px;    /* view + topbar inner padding */
+  --d-gap:6px;     /* grid / sumbar gaps */
+  --d-row:9px;     /* list row vertical padding */
+  --d-radius:9px;  /* override-block corner radius */
+  --d-tap:32px;    /* min interactive height — keep >=32px */
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
@@ -449,6 +449,8 @@ details.panel[open] summary::after{content:"▾"}
 
 /* ════════ MOBILE-FIRST OVERRIDES (dedicated mobile build) ════════ */
 html{-webkit-text-size-adjust:100%}
+/* allow the whole page to scroll left/right when content is wider than the screen */
+html,body{overflow-x:auto}
 body{font-size:var(--d-font)}
 #side{display:none!important}
 .botnav{display:flex!important}
@@ -462,8 +464,10 @@ body{font-size:var(--d-font)}
 .kdtop .lbl{display:none}
 .kdtop select{flex:1;max-width:none;font-size:14px;padding:10px 12px}
 
-/* layout: KD panels stay side-by-side; everything else single column */
-.planner-grid{grid-template-columns:1fr 1fr!important;gap:var(--d-gap)!important}
+/* layout: KD panels side-by-side, each a real min-width so cards are LONGER
+   (wider) not taller — page scrolls left/right to reach the off-screen column */
+/* enemy column (2nd) ~1/4 wider than the my-kingdom column (1st) */
+.planner-grid{grid-template-columns:minmax(190px,1fr) minmax(238px,1.25fr)!important;gap:var(--d-gap)!important}
 .planner-grid>.side-col{grid-column:1/-1!important}
 .grid2,.wave-cols,.graph-grid{grid-template-columns:1fr!important}
 .side-col{flex-direction:column!important}
@@ -476,7 +480,6 @@ body{font-size:var(--d-font)}
 .planner-grid .lrow{padding:8px 8px;gap:6px;flex-wrap:wrap}
 .planner-grid .lr-name{font-size:12px;gap:4px}
 .planner-grid .lr-sub{font-size:10px;white-space:normal}
-.planner-grid .lr-stats{font-size:9.5px;gap:2px 8px}
 .planner-grid .lr-ctrl{gap:4px;width:100%;justify-content:flex-end}
 .planner-grid .lr-right{gap:4px}
 .planner-grid .chip{padding:5px 7px;font-size:10.5px}
@@ -565,6 +568,36 @@ details.cpanel[open]>summary .panel-h::after{content:"\25be"}
 .ibsum{display:flex;justify-content:space-between;padding:9px 2px 2px;font-size:11.5px;color:var(--txt2)}
 .inote{width:100%;min-height:130px;background:var(--bg2);color:var(--txt);border:1px solid var(--line2);border-radius:8px;padding:10px;font-family:inherit;font-size:13px;line-height:1.5;resize:vertical}
 .inote:focus{outline:none;border-color:var(--amber)}
+/* ════ compact enemy province rows (planner targets + enemy KD intel) ════ */
+/* stop the 6-stat grid + sub line from wrapping — the main height cost */
+.plist .lrow{padding:6px 9px;gap:8px}
+.plist .lr-name{line-height:1.2}
+.plist .lr-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+/* planner half-width cards: tighter padding */
+.planner-grid .lrow{padding:6px 7px;gap:5px}
+.planner-grid .lr-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* keep tap targets >=32px in the slimmer rows */
+.plist .lr-right .btn.xs,.plist .lr-ctrl .btn.xs{min-height:32px}
+.plist .ministep button{min-height:32px}
+/* ════════ ENEMY cards — THE single, clean rule set controlling these cards.
+   Keep every field (NW RNW TPA WPA Cast WT). Each card is short: name line,
+   compact sub line, then the 6 stats flowing HORIZONTALLY across the row and
+   wrapping to a new line only when full — small readable mono font, tight gaps,
+   never one-stat-per-line. ════════ */
+.planner-grid .enemy-cards .lrow{padding:7px 9px;gap:7px;flex-wrap:wrap}
+.planner-grid .enemy-cards .lr-name{font-size:12px;gap:5px;line-height:1.25;flex-wrap:wrap;white-space:normal;overflow:visible}
+.planner-grid .enemy-cards .lr-name b{overflow-wrap:anywhere}
+.planner-grid .enemy-cards .lr-sub{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;line-height:1.25}
+.planner-grid .enemy-cards .lr-stats{display:flex;flex-flow:row wrap;align-items:baseline;overflow:visible;gap:2px 9px;margin-top:2px;font-size:11.5px;line-height:1.3}
+.planner-grid .enemy-cards .lr-stats span{white-space:nowrap;flex:0 0 auto}
+.planner-grid .enemy-cards .pill.sm{font-size:10.5px;padding:1px 6px}
+.planner-grid .enemy-cards .opmini{font-size:10px}
+.planner-grid .enemy-cards .lr-def span{font-size:9px}
+.planner-grid .enemy-cards .lr-def b{font-size:14px}
+.planner-grid .enemy-cards .star{font-size:15px}
+.planner-grid .enemy-cards .asg.mini{font-size:10px;padding:2px 6px}
+.planner-grid .enemy-cards .lr-right{flex-direction:column;gap:3px}
+.planner-grid .enemy-cards .lr-right .btn.xs{min-height:18px;min-width:18px;padding:1px 3px;font-size:8.5px;line-height:1}
 @media(max-width:560px){.icols{columns:1}}
 </style>
 </head>
@@ -594,7 +627,7 @@ details.cpanel[open]>summary .panel-h::after{content:"\25be"}
       <button data-act="nav:wave" class="navlink"><span class="i">⚔</span> Wave Planner</button>
       <button data-act="nav:targets" class="navlink"><span class="i">🎯</span> War Targets</button>
       <button data-act="nav:mykd" class="navlink"><span class="i">🛡</span> My Kingdom</button>
-      <button data-act="nav:graphs" class="navlink"><span class="i">📊</span> Graphs</button>
+      <button data-act="nav:graphs" class="navlink"><span class="i">📊</span> War Results</button>
       <button data-act="nav:intel" class="navlink"><span class="i">🔎</span> Intel</button>
       <button data-act="nav:reference" class="navlink"><span class="i">📖</span> Reference</button>
       <div class="navttl">Data</div>
@@ -627,7 +660,7 @@ details.cpanel[open]>summary .panel-h::after{content:"\25be"}
   <button data-act="nav:wave" class="botlink"><span class="i">⚔</span>Wave</button>
   <button data-act="nav:targets" class="botlink"><span class="i">🎯</span>Targets</button>
   <button data-act="nav:mykd" class="botlink"><span class="i">🛡</span>My KD</button>
-  <button data-act="nav:graphs" class="botlink"><span class="i">📊</span>Graphs</button>
+  <button data-act="nav:graphs" class="botlink"><span class="i">📊</span>Wars</button>
   <button data-act="nav:intel" class="botlink"><span class="i">🔎</span>Intel</button>
   <button data-act="nav:reference" class="botlink"><span class="i">📖</span>Ref</button>
   <button data-act="nav:import" class="botlink"><span class="i">📥</span>Data</button>
@@ -1025,7 +1058,7 @@ function render(){
   });
   renderKdSelect();
   document.getElementById("tickNum").textContent=STATE.tick;
-  const titles={wave:"Wave Planner",targets:"War Targets",mykd:"My Kingdom",graphs:"Graphs",intel:"Intel",reference:"Reference",import:"Import / Export",settings:"Settings"};
+  const titles={wave:"Wave Planner",targets:"War Targets",mykd:"My Kingdom",graphs:"War Results",intel:"Intel",reference:"Reference",import:"Import / Export",settings:"Settings"};
   document.getElementById("topTitle").textContent=titles[VIEW];
   const e=curEnemy();
   let sub="";
@@ -1043,7 +1076,7 @@ function render(){
   if(VIEW==="wave") v.innerHTML=viewWave();
   else if(VIEW==="targets") v.innerHTML=viewTargets();
   else if(VIEW==="mykd") v.innerHTML=viewMyKd();
-  else if(VIEW==="graphs") v.innerHTML=viewGraphs();
+  else if(VIEW==="graphs") v.innerHTML=viewWarResults();
   else if(VIEW==="intel") v.innerHTML=viewIntel();
   else if(VIEW==="reference") v.innerHTML=viewReference();
   else if(VIEW==="import") v.innerHTML=viewImport();
@@ -1393,7 +1426,7 @@ function enemyTable(e){
       </div>
     </div>`;
   }).join("");
-  return `${hint}<div class="plist">${rows}</div>`;
+  return `${hint}<div class="plist enemy-cards">${rows}</div>`;
 }
 
 function waveLists(e){
@@ -1707,7 +1740,218 @@ function killCounterPanel(e){
     <div class="note" style="padding:0 14px 13px">Estimates from breaking attacks in your current wave. Massacres use 9.5% peasants · 7.5% thieves · 5% wizards (×2 in war), plus personality bonuses.</div>
   </div>`;
 }
-function viewGraphs(){
+/*══════════════ VIEW: WAR RESULTS ══════════════*/
+let warResultsView=null;   // null = war list; or a war id for the per-war detail (Phase 3b)
+let warShowCharts=false;   // demoted kingdom-charts toggle
+let warHist={};            // war id -> {state:"loading"|"done"|"error", snaps:[]}  (Phase 3c time-series cache)
+let warHistProv=null;      // "side|name" province selected for drill-down
+function wrSyncKey(){ return (window.__WR_SYNC&&(window.__WR_SYNC.syncKey||window.__WR_SYNC.key))||""; }
+function loadWarHist(id){
+  if(warHist[id] && warHist[id].state!=="error") return;   // already loading or loaded
+  warHist[id]={state:"loading",snaps:[]};
+  fetch("/warhistory?id="+encodeURIComponent(id)+"&key="+encodeURIComponent(wrSyncKey()),{cache:"no-store"})
+    .then(r=>r.ok?r.json():Promise.reject(r.status))
+    .then(j=>{ warHist[id]={state:"done",snaps:(j&&j.snapshots)||[]}; if(VIEW==="graphs"&&String(warResultsView)===String(id)) render(); })
+    .catch(()=>{ warHist[id]={state:"error",snaps:[]}; if(VIEW==="graphs"&&String(warResultsView)===String(id)) render(); });
+}
+function wrLineChart(title, series, fmtFn){
+  const f=fmtFn||(n=>fmtK?fmtK(n):Math.round(+n||0).toLocaleString());
+  const all=[].concat(...series.map(s=>s.pts||[]));
+  if(all.length<2) return `<div class="note" style="padding:8px 14px">${esc(title)}: need ≥2 snapshots to chart.</div>`;
+  const ts=all.map(p=>p.t), vs=all.map(p=>p.v);
+  let tMin=Math.min(...ts), tMax=Math.max(...ts), vMin=Math.min(...vs), vMax=Math.max(...vs);
+  if(tMax===tMin) tMax=tMin+1;
+  const padv=(vMax-vMin)*0.08||1; const allNonNeg=Math.min(...vs)>=0; vMax+=padv; vMin-=padv; if(allNonNeg&&vMin<0) vMin=0;
+  if(vMax===vMin) vMax=vMin+1;
+  const W=560,H=180,L=58,R=12,T=12,B=8, iw=W-L-R, ih=H-T-B;
+  const X=t=>L+((t-tMin)/(tMax-tMin))*iw, Y=v=>T+ih-((v-vMin)/(vMax-vMin))*ih;
+  const lines=series.map(s=>{ const d=(s.pts||[]).slice().sort((a,b)=>a.t-b.t).map((p,i)=>(i?"L":"M")+X(p.t).toFixed(1)+" "+Y(p.v).toFixed(1)).join(" "); return d?`<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2"/>`:""; }).join("");
+  const grid=[0,0.5,1].map(g=>{ const v=vMin+(vMax-vMin)*g, y=Y(v).toFixed(1); return `<line x1="${L}" y1="${y}" x2="${W-R}" y2="${y}" stroke="var(--line)" stroke-width="1"/><text x="${L-6}" y="${(+y+3).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--txt2)">${f(v)}</text>`; }).join("");
+  const legend=series.map(s=>`<span style="color:${s.color};margin-left:14px;font-size:12px">■ ${esc(s.name)}</span>`).join("");
+  return `<div style="padding:10px 14px"><div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;margin-bottom:4px"><b style="font-size:13px">${esc(title)}</b><span>${legend}</span></div>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:auto;display:block">${grid}${lines}</svg></div>`;
+}
+function viewWarHistory(w){
+  const h=warHist[w.id];
+  const cnt=(h&&h.snaps)?`<span class="cnt">${h.snaps.length} snapshot${h.snaps.length===1?"":"s"}</span>`:"";
+  let inner;
+  if(!h||h.state==="loading") inner=`<div class="note" style="padding:14px">Loading war history…</div>`;
+  else if(h.state==="error") inner=`<div class="note" style="padding:14px">Couldn't load war history. <button class="btn ghost sm" data-act="wrhistretry:${w.id}">Retry</button></div>`;
+  else {
+    const snaps=(h.snaps||[]).slice().sort((a,b)=>(a.ts||0)-(b.ts||0));
+    if(snaps.length<2){
+      inner=`<div class="note" style="padding:14px">The engine records a snapshot each minute while a confirmed war is open. ${snaps.length} so far — charts appear once there are ≥2.</div>`;
+    } else {
+      const sum=arr=>(arr||[]).reduce((s,p)=>s+(+p.land||0),0);
+      const myName=(STATE.myKd&&STATE.myKd.name)||"Us", enName=w.enemyName||"Them";
+      let html=wrLineChart("Total land over time (A)",[
+        {name:myName,color:"var(--green2)",pts:snaps.map(s=>({t:s.ts,v:sum(s.my)}))},
+        {name:enName,color:"var(--red2)",pts:snaps.map(s=>({t:s.ts,v:sum(s.enemy)}))}]);
+      const last=snaps[snaps.length-1];
+      const btns=(side,list)=>(list||[]).map(p=>{ const on=warHistProv===side+"|"+p.name; return `<button class="btn ghost sm" data-act="wrprov:${side}|${esc(p.name)}"${on?' style="border-color:var(--gold);color:var(--gold)"':''}>${esc(p.name)}</button>`; }).join(" ");
+      html+=`<div style="border-top:1px solid var(--line)"></div><div style="padding:10px 14px">
+        <div class="note" style="margin-bottom:6px">Drill into a province — land over time:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px"><span class="note" style="align-self:center">🛡 ${esc(myName)}:</span>${btns("my",last.my)}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px"><span class="note" style="align-self:center">🎯 ${esc(enName)}:</span>${btns("enemy",last.enemy)}</div></div>`;
+      if(warHistProv){
+        const bar=warHistProv.indexOf("|"), pside=warHistProv.slice(0,bar), pname=warHistProv.slice(bar+1);
+        const arrOf=s=>pside==="my"?s.my:s.enemy;
+        const pts=snaps.map(s=>{ const pr=(arrOf(s)||[]).find(x=>x.name===pname); return pr?{t:s.ts,v:+pr.land||0}:null; }).filter(Boolean);
+        if(pts.length>=2){
+          html+=wrLineChart(esc(pname)+" — land over time (A)",[{name:pname,color:pside==="my"?"var(--teal)":"var(--amber)",pts:pts}]);
+          const cur=(arrOf(last)||[]).find(x=>x.name===pname);
+          if(cur) html+=`<div class="note" style="padding:0 14px 10px">Latest — NW ${fmtK(cur.nw)} · Def ${fmtK(cur.defense)} · Off ${fmtK(cur.offense)} · TPA ${cur.tpa||0} · WPA ${cur.wpa||0} · Honor ${fmtK(cur.honor)}</div>`;
+        } else html+=`<div class="note" style="padding:0 14px 10px">Not enough data points for ${esc(pname)} yet.</div>`;
+      }
+      inner=html;
+    }
+  }
+  return `<div class="panel" style="margin-bottom:16px"><div class="panel-h"><h3>📉 Loss over time</h3>${cnt}</div>${inner}</div>`;
+}
+function wrFmtDate(ts){ if(!ts) return "—"; try{ const d=new Date(ts); return d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" "+d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}); }catch(_){ return "—"; } }
+function wrDuration(a,b){ if(!a) return "—"; const end=b||Date.now(); const h=Math.max(0,end-a)/3.6e6; return h<24?(Math.round(h*10)/10)+"h":(Math.round(h/24*10)/10)+"d"; }
+function wrResultBadge(w){ if(!w.endTs) return `<span style="color:var(--gold)">● ONGOING</span>`; if(w.endReason==="victory") return `<span style="color:var(--green2)">✔ WON</span>`; if(w.endReason==="withdrawn") return `<span style="color:var(--red2)">✘ WITHDREW</span>`; return `<span style="color:var(--txt2)">CONCLUDED</span>`; }
+function viewWarResults(){
+  if(warResultsView!=null) return viewWarDetail(warResultsView);
+  const wars=(STATE.wars||[]).slice().sort((a,b)=>(b.startTs||0)-(a.startTs||0));
+  const f=v=>fmtK?fmtK(v):(+v||0).toLocaleString();
+  let html="";
+  if(!wars.length){
+    html += emptyState("⚔️","No wars recorded yet","Wars are detected automatically from kingdom news and throne intel. When your kingdom enters a war it appears here — each war saved separately, including repeat wars vs the same kingdom.","");
+  } else {
+    const rows=wars.map(w=>{
+      const o=(w.stats&&w.stats.ours)||{}, t=(w.stats&&w.stats.theirs)||{};
+      const netLand=(o.land||0)-(t.land||0);
+      return `<tr class="wr-row" data-act="waropen:${w.id}" style="cursor:pointer;border-top:1px solid var(--line)">
+        <td style="padding:8px 10px;font-weight:700;color:var(--head)">War ${w.id}</td>
+        <td style="padding:8px 10px">${esc(w.enemyName||"?")}<span class="note"> (${esc(w.enemyLoc||"?")})</span><div class="note">${w.dir==="ours"?"we declared":w.dir==="theirs"?"they declared":""}</div></td>
+        <td style="padding:8px 10px;white-space:nowrap">${esc(w.startDate||wrFmtDate(w.startTs))}<div class="note">${w.endTs?esc(w.endDate||wrFmtDate(w.endTs)):"— ongoing"}</div></td>
+        <td style="padding:8px 10px;text-align:right">${wrDuration(w.startTs,w.endTs)}</td>
+        <td style="padding:8px 10px;text-align:right">${wrResultBadge(w)}${w.eowcf?`<div class="note">EoWCF ${esc(w.eowcf)}</div>`:""}</td>
+        <td style="padding:8px 10px;text-align:right;color:var(--green2)">${o.attacks||0}</td>
+        <td style="padding:8px 10px;text-align:right;color:var(--red2)">${t.attacks||0}</td>
+        <td style="padding:8px 10px;text-align:right;font-weight:600;color:${netLand>=0?'var(--green2)':'var(--red2)'}">${netLand>=0?'+':''}${f(netLand)}A</td>
+      </tr>`;
+    }).join("");
+    html += `<div class="panel" style="margin-bottom:16px">
+      <div class="panel-h"><h3>⚔️ War Results</h3><span class="cnt">${wars.length} war${wars.length>1?"s":""} recorded</span></div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:14px">
+        <thead><tr style="color:var(--txt2);text-align:left">
+          <th style="padding:6px 10px">#</th><th style="padding:6px 10px">Enemy KD</th><th style="padding:6px 10px">Start / End</th>
+          <th style="padding:6px 10px;text-align:right">Dur</th><th style="padding:6px 10px;text-align:right">Result</th>
+          <th style="padding:6px 10px;text-align:right">⚔ Us</th><th style="padding:6px 10px;text-align:right">🎯 Them</th><th style="padding:6px 10px;text-align:right">Net land</th>
+        </tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="note" style="padding:10px 14px">Tap a war for per-province results and the attack log. Every war is saved separately — repeat wars vs the same kingdom included.</div>
+    </div>`;
+  }
+  html += `<div style="margin:6px 0 14px"><button class="btn ghost sm" data-act="togglecharts">${warShowCharts?"▾ Hide kingdom charts":"▸ Show kingdom charts"}</button></div>`;
+  if(warShowCharts) html += viewGraphsCharts();
+  return html;
+}
+function viewWarDetail(id){
+  const w=(STATE.wars||[]).find(x=>String(x.id)===String(id));
+  if(!w){ warResultsView=null; return viewWarResults(); }
+  const f=v=>fmtK?fmtK(v):(+v||0).toLocaleString();
+  const o=(w.stats&&w.stats.ours)||{}, t=(w.stats&&w.stats.theirs)||{};
+  const atks=(w.attacks||[]).slice();
+  const netLand=(o.land||0)-(t.land||0);
+  const GAINT={"trad march":1,"conquest":1,"ambush":1};
+  const myName=(STATE.myKd&&STATE.myKd.name)||"Us";
+
+  // ── header ──
+  let html=`<div style="margin-bottom:12px"><button class="btn ghost sm" data-act="warback">← All wars</button></div>`;
+  html+=`<div class="panel" style="margin-bottom:16px"><div class="panel-h">
+    <h3>⚔️ War ${w.id} — ${esc(w.enemyName||"?")} <span class="note">(${esc(w.enemyLoc||"?")})</span></h3>
+    <span class="cnt">${wrResultBadge(w)}</span></div>
+    <div style="padding:10px 14px;display:flex;flex-wrap:wrap;gap:18px;font-size:13px;color:var(--txt2)">
+      <div>${w.dir==="ours"?"⚔ we declared":w.dir==="theirs"?"🛡 they declared":"—"}</div>
+      <div>Start: <b style="color:var(--txt)">${esc(w.startDate||wrFmtDate(w.startTs))}</b></div>
+      <div>End: <b style="color:var(--txt)">${w.endTs?esc(w.endDate||wrFmtDate(w.endTs)):"ongoing"}</b></div>
+      <div>Duration: <b style="color:var(--txt)">${wrDuration(w.startTs,w.endTs)}</b></div>
+      ${w.eowcf?`<div>EoWCF: <b style="color:var(--txt)">${esc(w.eowcf)}</b></div>`:""}
+    </div></div>`;
+
+  // ── scoreboard (us vs them) ──
+  const metric=(label,a,b,hi)=>`<tr style="border-top:1px solid var(--line)">
+    <td style="padding:6px 12px;color:var(--txt2)">${label}</td>
+    <td style="padding:6px 12px;text-align:right;font-weight:${hi?700:500};color:var(--green2)">${f(a||0)}</td>
+    <td style="padding:6px 12px;text-align:right;font-weight:${hi?700:500};color:var(--red2)">${f(b||0)}</td></tr>`;
+  html+=`<div class="panel" style="margin-bottom:16px"><div class="panel-h"><h3>📊 Scoreboard</h3>
+    <span class="cnt" style="color:${netLand>=0?'var(--green2)':'var(--red2)'}">${netLand>=0?'+':''}${f(netLand)}A net land</span></div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:14px">
+      <thead><tr style="color:var(--txt2);text-align:left"><th style="padding:6px 12px"></th>
+        <th style="padding:6px 12px;text-align:right">⚔ ${esc(myName)}</th>
+        <th style="padding:6px 12px;text-align:right">🎯 ${esc(w.enemyName||"Them")}</th></tr></thead>
+      <tbody>
+        ${metric("Attacks",o.attacks,t.attacks)}
+        ${metric("Land taken (A)",o.land,t.land,true)}
+        ${metric("Troops killed",o.killed,t.killed)}
+        ${metric("Traditional march",o.traditional,t.traditional)}
+        ${metric("Conquest",o.conquest,t.conquest)}
+        ${metric("Ambush",o.ambush,t.ambush)}
+        ${metric("Raze",o.raze,t.raze)}
+        ${metric("Plunder",o.plunder,t.plunder)}
+        ${metric("Massacre",o.massacre,t.massacre)}
+      </tbody></table></div></div>`;
+
+  // ── per-province results (aggregated from the attack log) ──
+  const ourP={}, enP={};
+  const slot=(m,name,loc)=>{const k=(name||"?")+"|"+(loc||"");if(!m[k])m[k]={name:name||"?",loc:loc||"",made:0,gained:0,lost:0,kDealt:0,kTaken:0};return m[k];};
+  atks.forEach(a=>{
+    const gain=(GAINT[a.type]&&a.unit==="land")?(a.amt||0):0;
+    const kill=a.type==="massacre"?(a.amt||0):0;
+    if(a.dir==="ours"){
+      const us=slot(ourP,a.atkName,a.atkLoc); us.made++; us.gained+=gain; us.kDealt+=kill;
+      const en=slot(enP,a.defName,a.defLoc); en.lost+=gain; en.kTaken+=kill;
+    } else {
+      const en=slot(enP,a.atkName,a.atkLoc); en.made++; en.gained+=gain; en.kDealt+=kill;
+      const us=slot(ourP,a.defName,a.defLoc); us.lost+=gain; us.kTaken+=kill;
+    }
+  });
+  const provTable=(title,icon,m)=>{
+    const rows=Object.values(m).sort((x,y)=>(y.made+y.gained+y.lost)-(x.made+x.gained+x.lost));
+    if(!rows.length) return "";
+    const body=rows.map(p=>{const net=(p.gained||0)-(p.lost||0);return `<tr style="border-top:1px solid var(--line)">
+      <td style="padding:6px 12px;font-weight:600">${esc(p.name)}</td>
+      <td style="padding:6px 12px;text-align:right">${p.made||0}</td>
+      <td style="padding:6px 12px;text-align:right;color:var(--green2)">${p.gained?"+"+f(p.gained):"—"}</td>
+      <td style="padding:6px 12px;text-align:right;color:var(--red2)">${p.lost?"−"+f(p.lost):"—"}</td>
+      <td style="padding:6px 12px;text-align:right;font-weight:600;color:${net>=0?'var(--green2)':'var(--red2)'}">${net>=0?'+':'−'}${f(Math.abs(net))}A</td>
+      <td style="padding:6px 12px;text-align:right">${p.kDealt?f(p.kDealt):"—"}</td></tr>`;}).join("");
+    return `<div class="panel" style="margin-bottom:16px"><div class="panel-h"><h3>${icon} ${title}</h3><span class="cnt">${rows.length} prov${rows.length>1?"s":""}</span></div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:14px">
+      <thead><tr style="color:var(--txt2);text-align:left"><th style="padding:6px 12px">Province</th>
+        <th style="padding:6px 12px;text-align:right">Atks</th><th style="padding:6px 12px;text-align:right">Land +</th>
+        <th style="padding:6px 12px;text-align:right">Land −</th><th style="padding:6px 12px;text-align:right">Net</th>
+        <th style="padding:6px 12px;text-align:right">Kills</th></tr></thead><tbody>${body}</tbody></table></div></div>`;
+  };
+  if(atks.length){
+    html+=provTable("Our provinces","🛡",ourP);
+    html+=provTable("Enemy provinces","🎯",enP);
+  }
+
+  // ── attack log (newest first) ──
+  if(atks.length){
+    const log=atks.slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).map(a=>{
+      const mine=a.dir==="ours";
+      const amt=a.amt?f(a.amt)+(a.unit==="land"?"A":a.unit?" "+esc(a.unit):""):"";
+      return `<div style="display:flex;gap:10px;padding:6px 12px;border-top:1px solid var(--line);font-size:13px;align-items:baseline">
+        <span class="note" style="white-space:nowrap;min-width:96px">${esc(a.date||wrFmtDate(a.ts))}</span>
+        <span style="color:${mine?'var(--green2)':'var(--red2)'};white-space:nowrap">${mine?"⚔":"🎯"} ${esc(a.type||"?")}</span>
+        <span style="flex:1;min-width:0">${esc(a.atkName||"?")} <span class="note">→</span> ${esc(a.defName||"?")}</span>
+        <span style="white-space:nowrap;font-weight:600">${amt}</span></div>`;
+    }).join("");
+    html+=`<div class="panel" style="margin-bottom:16px"><div class="panel-h"><h3>📜 Attack log</h3><span class="cnt">${atks.length} attack${atks.length>1?"s":""}</span></div>
+      <div style="max-height:480px;overflow-y:auto">${log}</div></div>`;
+  } else {
+    html+=emptyState("📭","No attacks recorded for this war yet","Attacks are tagged to this war from the war log as they're scraped — they'll appear here automatically.","");
+  }
+
+  loadWarHist(w.id);
+  html+=viewWarHistory(w);
+  return html;
+}
+function viewGraphsCharts(){
   const e=curEnemy();
   const mode = (graphSide==="mine"||graphSide==="totals")?graphSide:"enemy";
   const toggle=`<div class="flex between pwrap" style="margin-bottom:16px;gap:12px">
@@ -2030,6 +2274,11 @@ document.addEventListener("click",ev=>{
     case "parseintel": applyIntel(); break;
     case "parsenews": parseNews(); break;
     case "graphside": graphSide=arg; render(); break;
+    case "togglecharts": warShowCharts=!warShowCharts; render(); break;
+    case "waropen": warResultsView=arg; warShowCharts=false; warHistProv=null; render(); break;
+    case "warback": warResultsView=null; warHistProv=null; render(); break;
+    case "wrprov": warHistProv=(warHistProv===arg?null:arg); render(); break;
+    case "wrhistretry": delete warHist[arg]; loadWarHist(arg); render(); break;
     case "intelmode": intelMode=arg; render(); break;
     case "savetoserver": saveToServer(); break;
     case "loadfromserver": loadFromServer(); break;
@@ -2610,7 +2859,7 @@ function showCopyFallback(text){
 let syncCursor=0, syncOn=false;
 function applyParsedIntel(r){
   const e=curEnemy(); if(!e||!r||!r.kind||!r.name) return false;
-  let p=e.provinces.find(x=>x.name.toLowerCase()===r.name.toLowerCase());
+  let p=findProvByName(e.provinces, r.name);
   let created=false;
   if(!p){ p={id:uid(),name:r.name,race:"",pers:"",land:0,nw:0,honor:0,defense:0,offense:0,tpa:"",wpa:"",mdtpa:"",mdwpa:"",armyOut:false,returnTick:0,incomingLand:0,generalsUsed:0,pop:0,maxpop:0}; e.provinces.push(p); created=true; }
   const f=r.fields;
@@ -2680,11 +2929,25 @@ function routeFeedEntry(en){
 }
 
 function cleanProvName(n){ let s=((n||"")+""); s=s.replace(/[~¬`*™]+/g,""); s=s.replace(/\s*\(\d{1,2}:\d{1,2}\)\s*$/,""); s=s.replace(/(?:TM)?\d[\d.,]*%.*$/i,""); s=s.replace(/\s+(?:TM|\(M\)|\(S\))\s*$/i,""); return s.trim(); }
+// Find a province by name, exact first, then a GUARD against truncated-name duplicates:
+// a province whose name starts with a number ("500 peasants in a trench coat") can be mis-parsed
+// by intel parsers as <slot>+<name>, yielding a truncated "peasants in a trench coat". Treat the
+// two as the SAME province (asymmetric — only merge when ONE side lacks a leading number, so
+// "500 Foo" vs "300 Foo" stay distinct) so no phantom stub is ever created.
+function findProvByName(list, nm){
+  if(!Array.isArray(list)||nm==null) return null;
+  const c=cleanProvName(nm).toLowerCase().trim();
+  let p=list.find(x=>cleanProvName(x.name).toLowerCase().trim()===c); if(p) return p;
+  const strip=s=>cleanProvName(s).toLowerCase().replace(/^\d+\s+/,"").trim();
+  const hasNum=s=>/^\d+\s+/.test(cleanProvName(s).toLowerCase().trim());
+  const base=strip(nm); if(!base) return null;
+  return list.find(x=>strip(x.name)===base && !(hasNum(x.name)&&hasNum(nm))) || null;
+}
 // write a parsed province (r) into a KD's province list; only real intel creates a province
 function applyProvinceTo(kd, r, updateOnly){
   if(!kd||!r||!r.name) return false;
   if(!Array.isArray(kd.provinces)) kd.provinces=[];
-  r.name=cleanProvName(r.name); let p=kd.provinces.find(x=>cleanProvName(x.name).toLowerCase()===r.name.toLowerCase());
+  r.name=cleanProvName(r.name); let p=findProvByName(kd.provinces, r.name);
   let created=false;
   if(!p){ if(updateOnly) return false; p={id:uid(),name:r.name,race:"",pers:"",land:0,nw:0,honor:0,defense:0,offense:0,tpa:"",wpa:"",mdtpa:"",mdwpa:"",armyOut:false,returnTick:0,incomingLand:0,generalsUsed:0,pop:0,maxpop:0}; kd.provinces.push(p); created=true; }
   const f=r.fields;
@@ -2737,7 +3000,7 @@ function parseKingdomProvinces(txt, kd, updateOnly){
     let nw=0; const nwm=line.match(/([\d,]+)\s*gc/i); if(nwm) nw=parseInt(nwm[1].replace(/,/g,""))||0;
     // upsert by name
     const _norm=s=>(s||"").toLowerCase().replace(/\s+/g," ").trim();
-    let p=kd.provinces.find(x=>_norm(x.name)===_norm(name));
+    let p=findProvByName(kd.provinces, name);
     if(!p){ if(updateOnly) continue; p={id:uid(),name:name,race:"",pers:"",land:0,nw:0,honor:0,defense:0,offense:0,tpa:"",wpa:"",mdtpa:"",mdwpa:"",armyOut:false,returnTick:0,incomingLand:0,generalsUsed:0,pop:0,maxpop:0}; kd.provinces.push(p); added++; }
     if(race) p.race=race;
     if(land) p.land=land;
@@ -2892,7 +3155,7 @@ function applyIntel(){
   const r=parseIntelText(txt);
   if(!r.kind){ toast("Couldn't recognize that as SoT / SoM / SoS / Survey / Infiltrate."); return; }
   if(!r.name){ toast("Found a "+r.kind.toUpperCase()+" but no province name (need 'Name (x:y)')."); return; }
-  let p=e.provinces.find(x=>x.name.toLowerCase()===r.name.toLowerCase());
+  let p=findProvByName(e.provinces, r.name);
   let created=false;
   if(!p){ p={id:uid(),name:r.name,race:"",pers:"",land:0,nw:0,honor:0,defense:0,offense:0,tpa:"",wpa:"",mdtpa:"",mdwpa:"",armyOut:false,returnTick:0,incomingLand:0,generalsUsed:0,pop:0,maxpop:0}; created=true; }
   const f=r.fields, applied=[];
