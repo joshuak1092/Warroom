@@ -560,7 +560,9 @@ const cmds = [
 
   new SlashCommandBuilder().setName('help').setDescription('List everything the bot can do'),
   new SlashCommandBuilder().setName('live').setDescription('Freshest live intel for a province from the feed').addStringOption(o=>o.setName('name').setDescription('province name').setRequired(true))
-, new SlashCommandBuilder().setName(`spells`).setDescription(`Active spells up + hostile on a province`).addStringOption(o=>o.setName(`name`).setDescription(`province or blank for yours`).setRequired(false))].map(c=>c.toJSON());
+, new SlashCommandBuilder().setName(`spells`).setDescription(`Active spells up + hostile on a province`).addStringOption(o=>o.setName(`name`).setDescription(`province or blank for yours`).setRequired(false))
+, new SlashCommandBuilder().setName('wars').setDescription('List all recorded wars + results')
+, new SlashCommandBuilder().setName('war').setDescription('Full breakdown of one war').addIntegerOption(o=>o.setName('id').setDescription('war number (see /wars)').setRequired(true))].map(c=>c.toJSON());
 
 
 // ===== WARLOG ATTACK POSTING (reads engine state.json - correct types, real dates) =====
@@ -869,6 +871,69 @@ client.once('clientReady', async () => {
   console.log('feed polling started (8s)');
 });
 
+// ===== WAR RESULTS (Phase 3d) — reads state.wars, same data as desktop/mobile =====
+function warResLabel(w){ return !w.endTs ? ':hourglass: ongoing' : w.endReason==='victory' ? ':white_check_mark: WON' : w.endReason==='withdrawn' ? ':x: withdrew' : 'concluded'; }
+function warsListCard(state){
+  const wars=(state.wars||[]).slice().sort((a,b)=>(b.startTs||0)-(a.startTs||0));
+  if(!wars.length) return 'No wars recorded yet. Wars are detected automatically from kingdom news + throne intel.';
+  const L=['__**War Results**__  ('+wars.length+' war'+(wars.length>1?'s':'')+')',''];
+  for(const w of wars){
+    const o=(w.stats&&w.stats.ours)||{}, t=(w.stats&&w.stats.theirs)||{}, net=(o.land||0)-(t.land||0);
+    L.push(':crossed_swords: **War '+w.id+'** vs **'+(w.enemyName||'?')+'** ('+(w.enemyLoc||'?')+') — '+warResLabel(w));
+    L.push('   '+(w.startDate||'?')+(w.endTs?(' → '+(w.endDate||'?')):' → now')+' · atks '+(o.attacks||0)+'/'+(t.attacks||0)+' · net '+(net>=0?'+':'')+N(net)+'A');
+  }
+  L.push('','Use `/war <id>` for the full breakdown.');
+  const out=L.join('\n');
+  return out.length>1990 ? out.slice(0,1985)+'\n…' : out;
+}
+function warDetailCard(state, id){
+  const w=(state.wars||[]).find(x=>String(x.id)===String(id));
+  if(!w) return null;
+  const o=(w.stats&&w.stats.ours)||{}, t=(w.stats&&w.stats.theirs)||{}, net=(o.land||0)-(t.land||0);
+  const myName=(state.myKd&&state.myKd.name)||'Us', enName=w.enemyName||'Them';
+  const L=['__**War '+w.id+' — '+enName+' ('+(w.enemyLoc||'?')+')**__  '+warResLabel(w)];
+  L.push((w.dir==='ours'?'we declared':w.dir==='theirs'?'they declared':'—')+' · '+(w.startDate||'?')+(w.endTs?(' → '+(w.endDate||'?')):' → now')+(w.eowcf?(' · EoWCF '+w.eowcf):''));
+  // scoreboard (monospace)
+  const pad=(s,n)=>String(s).padEnd(n), lp=(s,n)=>String(s).padStart(n), r=(lab,a,b)=>pad(lab,13)+lp(a,9)+'  '+lp(b,9);
+  L.push('```',
+    pad('',13)+lp(myName.slice(0,9),9)+'  '+lp(enName.slice(0,9),9),
+    r('Attacks',o.attacks||0,t.attacks||0),
+    r('Land (A)',N(o.land),N(t.land)),
+    r('Killed',N(o.killed),N(t.killed)),
+    r('Traditional',o.traditional||0,t.traditional||0),
+    r('Conquest',o.conquest||0,t.conquest||0),
+    r('Ambush',o.ambush||0,t.ambush||0),
+    r('Raze',o.raze||0,t.raze||0),
+    r('Plunder',o.plunder||0,t.plunder||0),
+    r('Massacre',o.massacre||0,t.massacre||0),
+    '```','**Net land: '+(net>=0?'+':'')+N(net)+'A**');
+  // per-province (aggregated from the attack log)
+  const GAINT={'trad march':1,'conquest':1,'ambush':1}, ourP={}, enP={};
+  const slot=(m,n)=>{ if(!m[n=(n||'?')])m[n]={name:n,made:0,gained:0,lost:0,kDealt:0}; return m[n]; };
+  (w.attacks||[]).forEach(a=>{
+    const gain=(GAINT[a.type]&&a.unit==='land')?(a.amt||0):0, kill=a.type==='massacre'?(a.amt||0):0;
+    if(a.dir==='ours'){ const us=slot(ourP,a.atkName); us.made++; us.gained+=gain; us.kDealt+=kill; slot(enP,a.defName).lost+=gain; }
+    else { const en=slot(enP,a.atkName); en.made++; en.gained+=gain; en.kDealt+=kill; slot(ourP,a.defName).lost+=gain; }
+  });
+  const provLines=m=>Object.values(m).sort((x,y)=>(y.made+y.gained+y.lost)-(x.made+x.gained+x.lost)).slice(0,6)
+    .map(p=>{ const n2=(p.gained||0)-(p.lost||0); return '  '+p.name+': '+p.made+' atk, '+(n2>=0?'+':'')+N(n2)+'A'+(p.kDealt?(', '+N(p.kDealt)+' killed'):''); });
+  if(w.attacks&&w.attacks.length){
+    const ol=provLines(ourP), el=provLines(enP);
+    if(ol.length) L.push('','**:shield: Our provinces**', ...ol);
+    if(el.length) L.push('','**:dart: Enemy provinces**', ...el);
+    // attack log (newest first, capped)
+    const log=w.attacks.slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,10).map(a=>{
+      const amt=a.amt?(' — '+N(a.amt)+(a.unit==='land'?'A':a.unit?(' '+a.unit):'')):'';
+      return (a.dir==='ours'?':crossed_swords:':':dart:')+' '+(a.type||'?')+' '+(a.atkName||'?')+' → '+(a.defName||'?')+amt+(a.date?('  _'+a.date+'_'):'');
+    });
+    if(log.length) L.push('','**:scroll: Attack log** (last '+log.length+(w.attacks.length>log.length?(' of '+w.attacks.length):'')+')', ...log);
+  } else {
+    L.push('','_No attacks recorded for this war yet._');
+  }
+  const out=L.join('\n');
+  return out.length>1990 ? out.slice(0,1985)+'\n…' : out;
+}
+
 client.on('interactionCreate', async (i) => {
   if (!i.isChatInputCommand()) return;
   if (i.commandName === `spells`) { /*SPELLS-V4*/ await i.deferReply(); const pname = await resolveProvName(i, i.options.getString(`name`)); if(!pname){ await i.editReply(`Give a province name, or link one with /link.`); return; } const feed = await httpGet(`/feed?key=` + KEY + `&since=0`); const pg = freshestPage(feed, pname, `/throne`); if(!pg){ await i.editReply(`No throne page for ` + pname + ` yet. Open its throne page in-game.`); return; } const sp = spellsFromThrone(pg.data_simple || ``); if(!sp.length){ await i.editReply(`No active spells on ` + pname + `.`); return; } const NB=[`meteor`,`greed`,`fool`,`gluttony`,`pitfall`,`explosion`,`amnesia`,`nightmare`,`vortex`,`tornado`,`lightning`,`fireball`,`land lust`,`storm`,`drought`,`vermin`,`chastity`,`expose`,`exposure`]; sp.forEach(function(sx){ const nl=String(sx.name||``).toLowerCase(); sx.bad=false; for(let b=0;b<NB.length;b++){ if(nl.indexOf(NB[b])>=0){ sx.bad=true; break; } } }); const L = [`__**` + pname + `** - Active Spells__`]; const fmt=sx=>sx.name + ` (` + sx.days + `d)`; const up = sp.filter(sx=>!sx.bad).map(fmt); const bad = sp.filter(sx=>sx.bad).map(fmt); if(up.length) L.push(`:green_circle: **Up:** ` + up.join(`, `)); if(bad.length) L.push(`:red_circle: **Hostile:** ` + bad.join(`, `)); await i.editReply(L.join(String.fromCharCode(10))); return; }
@@ -1039,6 +1104,11 @@ client.on('interactionCreate', async (i) => {
     const card = await statusCard(pname);
     if (!card) { await i.editReply('No live data for "' + pname + '". View that province in-game first.'); return; }
     await i.editReply('__**' + pname + '** — Status__\n' + card);
+  } else if (i.commandName === 'wars') {
+    await i.reply(warsListCard(state));
+  } else if (i.commandName === 'war') {
+    const id = i.options.getInteger('id');
+    await i.reply(warDetailCard(state, id) || ('War ' + id + ' not found. Use `/wars` to list them.'));
   } else if (i.commandName === 'help') {
     const h = [
       '__**War Room Bot — Commands**__',
@@ -1059,6 +1129,10 @@ client.on('interactionCreate', async (i) => {
       '`/weak <kd>` — lowest-defense provinces',
       '`/fat <kd>` — biggest-land provinces',
       '`/left [name]` — my provinces leftover offense',
+      '',
+      '**War Results**',
+      '`/wars` — list all recorded wars + results',
+      '`/war <id>` — full breakdown: scoreboard, per-province, attack log',
       '',
       '**Account & Alerts**',
       '`/link <province>` — link your Discord to your province',
