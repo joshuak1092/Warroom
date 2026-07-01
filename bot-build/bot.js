@@ -446,43 +446,111 @@ function boardCard(state, off, q){
   if(unscryed.length){ L.push(''); L.push(':white_circle: **Unscryed** ('+unscryed.length+') \u2014 spy these'); unscryed.sort((a,b)=>b.land-a.land).slice(0,8).forEach((x,i)=>L.push('`'+String(i+1).padStart(2)+'` '+x.p.name+' \u2014 '+N(x.land)+'a \u00b7 NW '+N(x.p.nw)+flag(x))); }
   return L.join('\n');
 }
-// /kdtpa + /kdwpa: aligned monospace table \u2014 per-prov Raw + Mod, KD avg, total
-// thieves/wizards, high/low. KD arg = ours or an enemy loc. Enemy: real where
-// scryed, '?' where not (unscryed provinces listed by name below the table).
+const _clip=(s,n)=>{s=String(s); return s.length>n?s.slice(0,n-1)+'\u2026':s;};
+const _isMine=(state,kd)=>!!(state.myKd&&kd&&kd.loc&&kd.loc===state.myKd.loc);
+const _landOf=p=>Number((p.intel||{}).land||p.land||0)||0;
+// /kdtpa + /kdwpa: aligned monospace table \u2014 per-prov Raw + Mod, KD avg (raw & mod),
+// total thieves/wizards = \u03a3(TPA/WPA \u00d7 land), high/low. KD arg = ours or an enemy loc.
+// Our KD = exact from state.json; enemy = as-scryed with '?' where not, and a partial note.
 function kdMagicCard(state, q, metric){
   const kd = q ? findKd(state,q) : (Object.values(state.enemies||{})[0]||null);
   if(!kd) return null;
-  const isW = metric==='wpa';
-  const iv=(p,k)=>{const i=p.intel||{}; return i[k]!=null?i[k]:p[k];};
+  const isW = metric==='wpa', mine=_isMine(state,kd);
   const numv=v=>{const n=Number(v); return isFinite(n)&&n>0?n:0;};
-  const rows=(kd.provinces||[]).map(p=>({ p,
-    raw: numv(isW?p.wpa:p.tpa), mod: numv(isW?p.mdwpa:p.mdtpa),
-    units: numv(iv(p, isW?'wizards':'thieves')) }));
+  const rows=(kd.provinces||[]).map(p=>({ p, land:_landOf(p),
+    raw: numv(isW?p.wpa:p.tpa), mod: numv(isW?p.mdwpa:p.mdtpa) }));
   const eff=x=>x.mod>0?x.mod:x.raw;
   const scryed=rows.filter(x=>x.raw>0||x.mod>0).sort((a,b)=>eff(a)-eff(b));
   const unscryed=rows.filter(x=>!(x.raw>0||x.mod>0));
-  const label=isW?'WPA':'TPA';
+  const label=isW?'WPA':'TPA', unitName=isW?'wizards':'thieves';
   const emoji=isW?':crystal_ball:':':detective:';
-  const uHead=isW?'Wizards':'Thieves';
   const d1=v=>v>0?v.toFixed(1):'?';
-  const clip=(s,n)=>{s=String(s); return s.length>n?s.slice(0,n-1)+'\u2026':s;};
-  const uCell=v=>v>0?v.toLocaleString():'?';
-  const head='#  '+'Prov'.padEnd(12)+' '+'Raw'.padStart(5)+' '+'Mod'.padStart(5)+' '+uHead.padStart(8);
+  const head='#  '+'Prov'.padEnd(14)+' '+'Raw'.padStart(6)+' '+'Mod'.padStart(6);
   const bar='-'.repeat(head.length);
   const lines=[head,bar];
   scryed.slice(0,25).forEach((x,i)=>lines.push(
-    String(i+1).padStart(2)+' '+clip(x.p.name,12).padEnd(12)+' '+d1(x.raw).padStart(5)+' '+d1(x.mod).padStart(5)+' '+uCell(x.units).padStart(8)));
+    String(i+1).padStart(2)+' '+_clip(x.p.name,14).padEnd(14)+' '+d1(x.raw).padStart(6)+' '+d1(x.mod).padStart(6)));
   const avg=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:0;
-  const rawsc=scryed.map(x=>x.raw).filter(v=>v>0), modsc=scryed.map(x=>x.mod).filter(v=>v>0);
-  const totUnits=rows.reduce((s,x)=>s+x.units,0);
+  const rawA=avg(scryed.map(x=>x.raw).filter(v=>v>0)), modA=avg(scryed.map(x=>x.mod).filter(v=>v>0));
+  const totUnits=scryed.reduce((s,x)=>s+Math.round((x.raw>0?x.raw:x.mod)*x.land),0);
   lines.push(bar);
-  lines.push('   '+'KD avg'.padEnd(12)+' '+d1(avg(rawsc)).padStart(5)+' '+d1(avg(modsc)).padStart(5)+' '+uCell(totUnits).padStart(8));
+  lines.push('   '+'KD avg'.padEnd(14)+' '+d1(rawA).padStart(6)+' '+d1(modA).padStart(6));
   const L=[emoji+' **'+label+' \u2014 '+kd.name+' ('+(kd.loc||'?')+')**  _softest first \u00b7 '+scryed.length+'/'+rows.length+' scryed_'];
   L.push('```\n'+lines.join('\n')+'\n```');
   if(scryed.length){ const lo=scryed[0], hi=scryed[scryed.length-1];
-    L.push('High '+d1(eff(hi))+' '+clip(hi.p.name,16)+' \u00b7 Low '+d1(eff(lo))+' '+clip(lo.p.name,16)); }
+    L.push('Total '+unitName+' \u2248 **'+N(totUnits)+'** (\u03a3 '+label+'\u00d7land) \u00b7 High '+d1(eff(hi))+' '+_clip(hi.p.name,16)+' \u00b7 Low '+d1(eff(lo))+' '+_clip(lo.p.name,16)); }
   else L.push('_none scryed for '+label+' yet \u2014 run survey + infiltrate + spy science + spy throne_');
-  if(unscryed.length) L.push(':white_circle: **No '+label+' intel** ('+unscryed.length+'): '+unscryed.slice(0,16).map(x=>clip(x.p.name,16)).join(', '));
+  if(unscryed.length) L.push(':white_circle: **No '+label+' intel** ('+unscryed.length+'): '+unscryed.slice(0,14).map(x=>_clip(x.p.name,14)).join(', '));
+  if(!mine && scryed.length) L.push('_enemy data is partial \u2014 only scryed provinces shown; "?" = not scouted._');
+  return L.join('\n');
+}
+// Council > State page: exact income/wages/net/employment/production. OUR provinces only
+// (you can't see an enemy's State page). All values are real, scouted numbers.
+function parseStatePage(t){
+  t=String(t||''); const o={}; const NX=s=>Number(String(s).replace(/,/g,''))||0;
+  const g=re=>{const m=t.match(re); return m?NX(m[1]):null;};
+  o.dailyIncome=g(/Daily Income\s+([\d,]+)/i);
+  o.dailyWages =g(/Daily Wages\s+([\d,]+)/i);
+  const em=t.match(/Employment\s+([\d.]+)%/i); o.employment=em?parseFloat(em[1]):null;
+  o.unfilledJobs=g(/Unfilled Jobs\s+([\d,]+)/i);
+  o.unemployed =g(/Unemployed Peasants\s+([\d,]+)/i);
+  o.peasants   =g(/Peasants\s+([\d,]+)/i);
+  const incY=g(/Our Income\s+([\d,]+)gc/i), wY=g(/Military Wages\s+([\d,]+)gc/i), dY=g(/Draft Costs\s+([\d,]+)gc/i);
+  o.netGold=(incY!=null&&wY!=null)?(incY-wY-(dY||0)):null;   // net = income - wages - draft (yesterday)
+  const fG=g(/Food Grown\s+([\d,]+)/i), fN=g(/Food Needed\s+([\d,]+)/i), fD=g(/Food Decayed\s+([\d,]+)/i);
+  o.netFood=(fG!=null&&fN!=null)?(fG-fN-(fD||0)):null;
+  const rP=g(/Runes Produced\s+([\d,]+)/i), rD=g(/Runes Decayed\s+([\d,]+)/i);
+  o.netRunes=(rP!=null)?(rP-(rD||0)):null;
+  return o;
+}
+function sciEcon(t){ t=String(t||''); const o={};
+  const a=t.match(/Alchemy\s+[\d,]+\s+(-?[\d.]+)%/i); if(a)o.alchemy=parseFloat(a[1]);
+  const b=t.match(/Tools\s+[\d,]+\s+(-?[\d.]+)%/i);   if(b)o.tools=parseFloat(b[1]);
+  return o;
+}
+// /econ prov:<name> \u2014 single-province economy from the State page (exact) + science econ.
+function econProvCard(name, o, sci, age){
+  const per=v=>v==null?'?':(v>=0?'+':'')+v.toLocaleString();
+  const tick=v=>v==null?'?':(v>=0?'+':'')+Math.round(v/24).toLocaleString();
+  const L=['__**'+name+' \u2014 Economy**__'+(o&&o.dailyIncome!=null?'  _State page'+(age?' \u00b7 '+age:'')+'_':'')];
+  if(!o||o.dailyIncome==null){ L.push('_No State page captured for this province yet \u2014 open Council \u25b8 State for it in-game._'); return L.join('\n'); }
+  const employed=(o.peasants!=null&&o.unemployed!=null)?(o.peasants-o.unemployed):null;
+  L.push('Peasants **'+N(o.peasants)+'** \u00b7 Employment **'+(o.employment!=null?o.employment+'%':'?')+'** ('+N(o.unemployed)+' idle \u00b7 '+N(o.unfilledJobs)+' unfilled jobs)');
+  const ipe=(o.dailyIncome!=null&&employed)?(o.dailyIncome/employed):null;
+  L.push('Income  **'+N(o.dailyIncome)+'**/day ('+tick(o.dailyIncome)+'/tick)'+(ipe?'  \u2248 '+N(employed)+' employed \u00d7 '+ipe.toFixed(2)+'gc':''));
+  L.push('Wages   **'+N(o.dailyWages)+'**/day ('+tick(o.dailyWages)+'/tick)');
+  L.push('NET     **'+per(o.netGold)+'**/day ('+tick(o.netGold)+'/tick)  _actual gold change incl. draft_');
+  L.push('Food net '+per(o.netFood)+'/day \u00b7 Runes net '+per(o.netRunes)+'/day');
+  if(sci&&(sci.alchemy!=null||sci.tools!=null)) L.push('Science econ: '+[sci.alchemy!=null?'Alchemy +'+sci.alchemy+'% income':null, sci.tools!=null?'Tools +'+sci.tools+'% BE':null].filter(Boolean).join(' \u00b7 '));
+  L.push('_per-tick = /day \u00f7 24 ticks_');
+  return L.join('\n');
+}
+// /kdecon <kd> \u2014 per-prov Income/Wages/Net table + KD TOTAL + grand production footer.
+// sm: map of prov-name(lower) -> parseStatePage result (built from the feed by the handler).
+function kdEconCard(state, q, sm){
+  const kd = q ? findKd(state,q) : (Object.values(state.enemies||{})[0]||null);
+  if(!kd) return null;
+  const mine=_isMine(state,kd);
+  const per=v=>v==null?'?':(v>=0?'+':'')+v.toLocaleString();
+  const tick=v=>v==null?'?':(v>=0?'+':'')+Math.round(v/24).toLocaleString();
+  const cell=v=>v==null?'?':Math.round(v).toLocaleString();
+  const R=(kd.provinces||[]).map(p=>({ p, o: mine?(sm[(p.name||'').toLowerCase().trim()]||null):null }));
+  R.sort((a,b)=>((b.o&&b.o.dailyIncome)||-1)-((a.o&&a.o.dailyIncome)||-1));
+  const head='#  '+'Prov'.padEnd(14)+' '+'Income'.padStart(8)+' '+'Wages'.padStart(8)+' '+'Net'.padStart(8);
+  const bar='-'.repeat(head.length);
+  const lines=[head,bar];
+  let ti=0,tw=0,tn=0,tf=0,tr=0,have=0,shown=0;
+  for(let i=0;i<R.length;i++){ const x=R[i], o=x.o;
+    if(shown<25){ lines.push(String(i+1).padStart(2)+' '+_clip(x.p.name,14).padEnd(14)+' '+cell(o&&o.dailyIncome).padStart(8)+' '+cell(o&&o.dailyWages).padStart(8)+' '+cell(o&&o.netGold).padStart(8)); shown++; }
+    if(o){ have++; ti+=o.dailyIncome||0; tw+=o.dailyWages||0; tn+=o.netGold||0; tf+=o.netFood||0; tr+=o.netRunes||0; } }
+  if(R.length>shown) lines.push('   \u2026 +'+(R.length-shown)+' more provinces');
+  lines.push(bar);
+  lines.push('   '+('TOTAL '+have+'/'+R.length).padEnd(14)+' '+cell(ti).padStart(8)+' '+cell(tw).padStart(8)+' '+cell(tn).padStart(8));
+  const L=[':moneybag: **Economy \u2014 '+kd.name+' ('+(kd.loc||'?')+')**  _income/day, highest first_'];
+  L.push('```\n'+lines.join('\n')+'\n```');
+  L.push('**GRAND PRODUCTION / day** \u2014 Gold '+per(tn)+' \u00b7 Runes '+per(tr)+' \u00b7 Food '+per(tf)+'  _(/tick: Gold '+tick(tn)+' \u00b7 Runes '+tick(tr)+' \u00b7 Food '+tick(tf)+')_');
+  if(!mine) L.push('_enemy economy isn\u2019t visible (no State-page access) \u2014 estimated/"?" only._');
+  else if(have<R.length) L.push('_partial: '+have+'/'+R.length+' provinces have a captured State page; the rest show "?"._');
   return L.join('\n');
 }
 function myResourceCard(state, metric){
@@ -565,13 +633,14 @@ const cmds = [
   new SlashCommandBuilder().setName('kds').setDescription('List tracked kingdoms'),
   new SlashCommandBuilder().setName('survey').setDescription('Building breakdown for a province').addStringOption(o=>o.setName('name').setDescription('province name').setRequired(true)),
   new SlashCommandBuilder().setName('tpa').setDescription('Thievery & magic for a province').addStringOption(o=>o.setName('name').setDescription('province name').setRequired(true)),
-  new SlashCommandBuilder().setName('econ').setDescription('Economy for a province').addStringOption(o=>o.setName('name').setDescription('province name').setRequired(true)),
+  new SlashCommandBuilder().setName('econ').setDescription('Economy for a province').addStringOption(o=>o.setName('prov').setDescription('province name').setRequired(false)).addStringOption(o=>o.setName('name').setDescription('province name (alias)').setRequired(false)),
   new SlashCommandBuilder().setName('wpa').setDescription('Magic detail for a province').addStringOption(o=>o.setName('name').setDescription('province name').setRequired(true)),
   new SlashCommandBuilder().setName('break').setDescription('Can your offense break a province?').addStringOption(o=>o.setName('name').setDescription('province name').setRequired(true)).addIntegerOption(o=>o.setName('off').setDescription('your offense').setRequired(true)),
   new SlashCommandBuilder().setName('targets').setDescription('All breakable provinces in a KD').addStringOption(o=>o.setName('kd').setDescription('KD location e.g. 6:4').setRequired(true)).addIntegerOption(o=>o.setName('off').setDescription('your offense').setRequired(true)),
   new SlashCommandBuilder().setName('board').setDescription('Enemy target board: breakable / unscryed / army-out').addIntegerOption(o=>o.setName('off').setDescription('your offense (optional - else your linked province)').setRequired(false)).addStringOption(o=>o.setName('kd').setDescription('enemy KD loc (optional)').setRequired(false)),
   new SlashCommandBuilder().setName('kdtpa').setDescription('Thievery (TPA) for every province in a KD').addStringOption(o=>o.setName('kd').setDescription('KD loc (default: your enemy)').setRequired(false)),
   new SlashCommandBuilder().setName('kdwpa').setDescription('Magic (WPA) for every province in a KD').addStringOption(o=>o.setName('kd').setDescription('KD loc (default: your enemy)').setRequired(false)),
+  new SlashCommandBuilder().setName('kdecon').setDescription('Economy table (Income/Wages/Net) for every province in a KD').addStringOption(o=>o.setName('kd').setDescription('KD loc (default: your enemy)').setRequired(false)),
   /*STEALTH-MANA-CMD*/ new SlashCommandBuilder().setName('stealth').setDescription('Stealth % for every province in my KD'),
   new SlashCommandBuilder().setName('mana').setDescription('Mana % for every province in my KD'),
   new SlashCommandBuilder().setName('weak').setDescription('Lowest-defense provinces in a KD').addStringOption(o=>o.setName('kd').setDescription('KD location e.g. 6:4').setRequired(true)),
@@ -1045,16 +1114,15 @@ client.on('interactionCreate', async (i) => {
     await i.editReply(card);
   } else if (i.commandName === 'econ') {
     await i.deferReply();
-    const pname = await resolveProvName(i, i.options.getString('name'));
-    const hit = findProv(state, pname);
+    const pname = await resolveProvName(i, i.options.getString('prov') || i.options.getString('name'));
+    if (!pname) { await i.editReply('Give a province: `/econ prov:<name>`'); return; }
     const feed = await httpGet('/feed?key=' + KEY + '&since=0');
-    const live = freshestFor(feed, pname);
-    if (!hit && !live) { await i.editReply('Province not found.'); return; }
-    let useHit = hit || { p:{ name:pname, intel:{} }, loc:'?', kd:'?' };
-    let age=null;
-    if (live && live.data) { const d=live.data, I=useHit.p.intel=useHit.p.intel||{}; const s=(k,v)=>{if(v!=null)I[k]=Number(v)||v;}; s('gcs',d.money); s('food',d.food); s('runes',d.runes); s('peons',d.peasants); s('tb',d.tb); age=freshAge(live.ts); }
-    let card = econCard(useHit); if(age) card += '\n_live: ' + age + '_';
-    await i.editReply(card);
+    const sp = freshestPage(feed, pname, 'council_state');
+    const scp = freshestPage(feed, pname, '/science');
+    const o = sp ? parseStatePage(sp.data_simple || '') : null;
+    const sci = scp ? sciEcon(scp.data_simple || '') : null;
+    const age = sp ? freshAge(sp.ts) : null;
+    await i.editReply(econProvCard(pname, o, sci, age));
   } else if (i.commandName === 'wpa') {
     await i.deferReply();
     const pname = await resolveProvName(i, i.options.getString('name'));
@@ -1088,6 +1156,16 @@ client.on('interactionCreate', async (i) => {
     await i.reply(kdMagicCard(state, i.options.getString('kd'), 'tpa') || 'No KD found.');
   } else if (i.commandName === 'kdwpa') {
     await i.reply(kdMagicCard(state, i.options.getString('kd'), 'wpa') || 'No KD found.');
+  } else if (i.commandName === 'kdecon') {
+    await i.deferReply();
+    const feed = await httpGet('/feed?key=' + KEY + '&since=0');
+    const sm = {};
+    if (feed && feed.entries) { for (const e of feed.entries) {
+      if ((e.url || '').toLowerCase().indexOf('council_state') < 0) continue;
+      const k = (e.prov || '').toLowerCase().trim(); if (!k) continue;
+      if (!sm[k] || (e.ts || 0) > (sm[k].__ts || 0)) { const parsed = parseStatePage(e.data_simple || ''); parsed.__ts = e.ts; sm[k] = parsed; }
+    } }
+    await i.editReply(kdEconCard(state, i.options.getString('kd'), sm) || 'No KD found.');
   } else if (i.commandName === 'stealth') {
     await i.reply(myResourceCard(state, 'stealth') || 'No KD data.');
   } else if (i.commandName === 'mana') {

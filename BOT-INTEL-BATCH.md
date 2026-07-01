@@ -43,15 +43,18 @@ Status: ✅ DONE (2026-07-01) — push existed but was silent; made it explicit 
 - `/econ prov:<name>` — single-prov economy: income breakdown, wages, net, peasants, employment, science econ.
 - `/kdecon` — per-prov Income/Wages/Net table + KD total row + grand production footer (Gold net, Runes, Food net per tick). Enemy = estimated w/ note.
 
-Status: ⏳ IN PROGRESS (2026-07-01) — split into 2 commits (tables first).
-- [x] `/kdtpa` + `/kdwpa` — rewrote kdMagicCard into an aligned monospace table: per-prov Raw+Mod cols, thieves/wizards col, KD-avg row (raw+mod) + total thieves/wizards, high/low line, unscryed list. KD arg = ours or enemy loc; enemy shows real where scryed, '?' where not. node --check pass; transplant-tested against live state.json.
-- [ ] `/econ prov:<name>` — expand to income breakdown / wages / net / peasants / employment / science econ. Per user: SCOUTED RAW VALUES ONLY, '?' where not scouted — no modeled formulas.
-- [ ] `/kdecon` — NEW command: per-prov Income/Wages/Net table + KD total + production footer. Raw-values-only per user; estimates noted where unavoidable.
-- Bot NOT restarted yet (handlers changed but commands already registered; will restart after econ commit, awaiting OK).
+Status: ✅ DONE (2026-07-01) — 2 commits (tables, then econ). Bot restarted & approved.
+- [x] `/kdtpa` + `/kdwpa` — aligned monospace table: per-prov Raw+Mod, KD-avg (raw & mod), total thieves/wizards = Σ(TPA/WPA × land), high/low, unscryed list. KD arg = ours or enemy loc; enemy real-where-scryed + partial note.
+- [x] `/econ prov:<name>` — exact economy from the **Council ▸ State page** (`council_state`), parsed live from the feed: peasants, employment %, income+wages+NET (per day & per tick), food/rune net, science econ (Alchemy/Tools). '?' when no State page captured.
+- [x] `/kdecon` — NEW command (registered): per-prov Income/Wages/Net table + KD TOTAL row + GRAND PRODUCTION footer (Gold/Runes/Food net per day & tick). Our KD = exact where a State page exists (partial note for the rest); enemy = not visible → all '?' with note.
+- KEY REALIZATION: the State page carries real income/wages/net/employment/production — no formulas needed (nets = subtraction of scouted values). `wiki.html` had no usable formulas. Enemy State pages aren't accessible, so enemy econ stays '?'.
+- Baked-in choices (revisit later): Net includes draft (so Income−Wages≠Net when drafting); per-tick = daily÷24; enemy econ all '?'.
+- node --check pass; transplant-tested all four commands against live state.json + intel-log.json.
 
 ---
 
 ## Progress log
+- 2026-07-01 — TASK 4 (2/2) COMPLETE — /econ (State-page exact) + /kdecon (new, registered) built on the council_state parser (parseStatePage/sciEcon/econProvCard/kdEconCard); /kdtpa+/kdwpa totals switched to Σ(metric×land). node --check pass; transplant-tested all four on live data. User approved as-is; bot restarted. All 4 batch tasks now done.
 - 2026-07-01 — TASK 4 (1/2) — /kdtpa + /kdwpa rewritten as aligned monospace tables (Raw+Mod, KD avg, thief/wiz totals, high/low, unscryed list). kdMagicCard replaced; node --check pass; transplant-tested on live state.json. Econ pair (/econ, /kdecon) next, raw-values-only. Bot not yet restarted.
 - 2026-07-01 — TASK 3 complete. CSV import push made explicit + result-surfaced: added importSave() to both HTML files, routed all 4 my/enemy import paths through it (async). Push already existed (silent debounce) but rejections were invisible; now toasted. vm.Script syntax check clean. warroom-server NOT restarted (awaiting OK to serve new HTML).
 - 2026-07-01 — TASK 2 complete. scout.js +generals; bot.js provCard military/army-out/science/survey + vpParseOp op-registration; both HTML SoM label + intel render. Group A firewalls/combo split into its own prior commit. bot.js/scout.js/intel-server.js pass node --check. pm2 not restarted (awaiting OK).
