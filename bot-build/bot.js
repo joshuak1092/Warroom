@@ -12,6 +12,15 @@ const LINKS_FILE = __dirname + '/links.json';
 let links = {};
 try { links = JSON.parse(fs.readFileSync(LINKS_FILE,'utf8')); } catch(e) { links = {}; }
 function saveLinks(){ try { fs.writeFileSync(LINKS_FILE, JSON.stringify(links,null,2)); } catch(e){} }
+// ---- per-user timezone store (persists across restarts, same pattern as links.json) ----
+const TZ_FILE = __dirname + '/usertz.json';
+let userTzMap = {};
+try { userTzMap = JSON.parse(fs.readFileSync(TZ_FILE,'utf8')); } catch(e) { userTzMap = {}; }
+function saveTz(){ try { fs.writeFileSync(TZ_FILE, JSON.stringify(userTzMap,null,2)); } catch(e){} }
+function validTz(tz){ if(!tz||typeof tz!=='string') return false; try { new Intl.DateTimeFormat('en-US',{timeZone:tz}); return true; } catch(e){ return false; } }
+function tzOf(uid){ return userTzMap[uid]||null; }
+function fmtInTz(ms, tz){ try { return new Intl.DateTimeFormat('en-US',{timeZone:tz, weekday:'short', hour:'2-digit', minute:'2-digit', hour12:true}).format(new Date(ms)); } catch(e){ return null; } }
+function hhmmInTz(ms, tz){ try { return new Intl.DateTimeFormat('en-US',{timeZone:tz, hour:'2-digit', minute:'2-digit', hour12:false}).format(new Date(ms)); } catch(e){ return null; } }
 function provKey(name){ return (name||'').toLowerCase().trim(); }
 function findLinkByUser(uid){ for(const k in links){ if(links[k].discord_id===uid) return {prov:links[k].prov, key:k}; } return null; }
 function cleanProvName(s){ return (s||'').toLowerCase().replace(/^\d+\s*-\s*/,'').replace(/\s*\(\d+:\d+\)\s*$/,'').replace(/[~`*]+/g,'').trim(); }
@@ -28,15 +37,16 @@ function parseArmies(txt){
   return out;
 }
 // Build the shared status card for one of OUR provinces, from the live feed
-async function statusCard(provName){
+async function statusCard(provName, hit){
   let feed=null; try{ feed=await httpGet('/feed?key='+KEY+'&since=0'); }catch(e){}
-  if(!feed||!feed.entries) return null;
+  if(!feed||!feed.entries) feed={entries:[]};
+  const si=(hit&&hit.p&&hit.p.intel)||{}; const sth=si.throne||{};
   const want=provName.toLowerCase().replace(/[~`*]/g,'').trim();
   const recent=feed.entries.slice().sort((a,b)=>(b.ts||0)-(a.ts||0));
   const find=(needle)=>recent.find(e=>(e.url||'').includes(needle) && (e.prov||'').toLowerCase().replace(/[~`*]/g,'').trim()===want);
   const findThroneFor=()=>recent.find(e=>{const t=e.data_simple||'';const pm=t.match(/The Province of ([^(]+?)\s*\(\d+:\d+\)/);return pm && pm[1].toLowerCase().replace(/[~`*]/g,'').trim()===want;});
   const th=findThroneFor();
-  const N2=v=>(v!=null&&v!=='')?Number(String(v).replace(/,/g,'')).toLocaleString():'?';
+  const N2=v=>{ if(v==null||v==='') return '?'; const n=Number(String(v).replace(/,/g,'')); return isFinite(n)?n.toLocaleString():'?'; };
   const L=[];
   // throne days (TOP)
   const cs=find('council_state');
@@ -46,15 +56,24 @@ async function statusCard(provName){
   if(th){const t=th.data_simple;const g=re=>{const m=t.match(re);return m?m[1]:null;}; offTotal=g(/Off\. Points\s+([\d,]+)/)||'?'; defTotal=g(/Def\. Points\s+([\d,]+)/)||'?';}
   const cm=find('council_military');
   if(cm){const t=cm.data_simple;const g=re=>{const m=t.match(re);return m?m[1]:null;}; offHome=g(/Net Offensive Points at Home\s+([\d,]+)/)||'?'; defHome=g(/Net Defensive Points at Home\s+([\d,]+)/)||'?'; gens=g(/(\d+) generals available/)||'?';}
+  // fall back to stored state.json intel when the live feed lacks these pages
+  if(offHome==='?'&&si.offHome!=null) offHome=si.offHome;
+  if(defHome==='?'&&si.defHome!=null) defHome=si.defHome;
+  if(offTotal==='?'&&sth['Off. Points']) offTotal=sth['Off. Points'];
+  if(defTotal==='?'&&sth['Def. Points']) defTotal=sth['Def. Points'];
+  if(gens==='?'&&si.generals!=null) gens=si.generals;
   L.push('**Offense:** '+N2(offHome)+' home / '+N2(offTotal)+' total');
   L.push('**Defense:** '+N2(defHome)+' home / '+N2(defTotal)+' total');
   // rTPA / rWPA
   let rtpa='?',rwpa='?';
   const tv=find('/thievery'); if(tv){const m=tv.data_simple.match(/\(([\d.]+)\s*per acre\)/); if(m) rtpa=m[1];}
   const sc=find('/sorcery')||find('/enchantment'); if(sc){const m=sc.data_simple.match(/\(([\d.]+)\s*Wizards Per Acre\)/i); if(m) rwpa=m[1];}
+  const sLand=Number(si.land||(hit&&hit.p&&hit.p.land)||(sth.Land?String(sth.Land).replace(/,/g,''):0))||0;
+  if(rtpa==='?'&&si.thieves!=null&&sLand>0) rtpa=(Number(si.thieves)/sLand).toFixed(1);
   L.push('rTPA '+rtpa+' · rWPA '+rwpa);
-  // economy from throne
+  // economy from throne (live feed first, else stored intel)
   if(th){const t=th.data_simple;const g=re=>{const m=t.match(re);return m?m[1]:'?';}; L.push('Money '+N2(g(/Money\s+([\d,]+)/))+' · Food '+N2(g(/Food\s+([\d,]+)/))+' · Runes '+N2(g(/Runes\s+([\d,]+)/)));}
+  else if(sth.Money||sth.Food||sth.Runes){ L.push('Money '+N2(sth.Money)+' · Food '+N2(sth.Food)+' · Runes '+N2(sth.Runes)); }
   // generals: home + each out on its own line
   const armies = th ? parseArmies(th.data_simple) : [];
   const gensNum = (gens!=='?') ? Number(gens) : null;
@@ -62,6 +81,7 @@ async function statusCard(provName){
   L.push('**Generals available to attack:** '+sendable+(armies.length?' · '+armies.length+' out':''));
   armies.forEach((a,idx)=>{ L.push('  \u2192 #'+(idx+1)+' returns in '+a.days.toFixed(2)+'h (+'+a.land.toLocaleString()+' land)'); });
   if(th) L.push('_live '+freshAge(th.ts)+'_');
+  else if(si.throneTs) L.push('_stored intel '+freshAge(si.throneTs)+'_');
   return L.join('\n');
 }
 const fs2=require('fs');
@@ -334,7 +354,9 @@ function provCard(hit) {
   L.push('  mWPA ' + (p.mdwpa||'?') + ' · oWPA ' + (g('owpa')||'?') + ' · dWPA ' + (g('dwpa')||'?') + ' · rWPA ' + (_rwpa||'?'));
   L.push('  Thieves ' + N(g('thieves')) + ' · Wizards ' + N(g('wizards')) + (g('be')?' · BE '+g('be')+'%':''));
   L.push('**Economy**');
-  L.push('  Gold ' + N(g('gcs')) + ' · Food ' + N(g('food')) + ' · Runes ' + N(g('runes')) + ' · Peons ' + N(g('peons')));
+  const _th = i.throne || {};
+  const _eco = (flatK, thK) => { const v = g(flatK); if (v != null) return v; return _th[thK] != null ? _th[thK] : null; };
+  L.push('  Gold ' + N(_eco('gcs','Money')) + ' · Food ' + N(_eco('food','Food')) + ' · Runes ' + N(_eco('runes','Runes')) + ' · Peons ' + N(_eco('peons','Peasants')));
   if (i.science && i.science.length) { L.push('**Science**'); L.push('  ' + i.science.map(s=>s.name+' '+(s.effect>=0?'+':'')+s.effect+'%').join(' · ')); }
   if (i.survey && i.survey.buildings && i.survey.buildings.length) { const sv=i.survey; L.push('**Buildings** ('+N(sv.total)+'a'+(sv.stats&&sv.stats.buildEff!=null?', '+sv.stats.buildEff+'% eff':'')+')'); L.push('  ' + sv.buildings.filter(b=>b.qty>0).map(b=>b.name+' '+N(b.qty)+' ('+b.pct+'%)').join(' · ')); }
   const age = g('intelAge');
@@ -348,15 +370,19 @@ function kdSummary(state, locOrName) {
   const gi = (p,k) => { const i=p.intel||{}; return i[k]!=null?i[k]:p[k]; };
   const sum = f => ps.reduce((a,p)=>a+(Number(gi(p,f))||0),0);
   const avg = f => Math.round(sum(f)/Math.max(1,ps.length));
+  const landOf = p => Number(gi(p,'land')||p.land)||0;
+  const paOf = (p,f) => { const v=Number(gi(p,f))||0, l=landOf(p); return (v>0&&l>0)?v/l:null; };
+  const avgPa = f => { const vs=ps.map(p=>paOf(p,f)).filter(v=>v!=null); return vs.length?vs.reduce((a,b)=>a+b,0)/vs.length:null; };
   const L = [];
   L.push('__**' + kd.name + '**__ · ' + (kd.loc||'?') + ' · ' + ps.length + ' provinces');
   L.push('Land **' + N(sum('land')) + '** · NW **' + N(sum('nw')) + '** · Avg NW ' + N(avg('nw')));
-  L.push('Off ' + N(sum('offHome')) + ' · Def ' + N(sum('defHome')) + ' · Avg OSPA ' + avg('opa') + ' · Avg DSPA ' + avg('dpa'));
-  L.push('Avg TPA ' + (avg('rtpa')||'?') + ' · Avg WPA ' + (avg('rwpa')||'?'));
+  const aO=avgPa('offHome'), aD=avgPa('defHome'), aT=avgPa('thieves'), aW=avgPa('wizards');
+  L.push('Off ' + N(sum('offHome')) + ' · Def ' + N(sum('defHome')) + ' · Avg OSPA ' + (aO!=null?Math.round(aO):'?') + ' · Avg DSPA ' + (aD!=null?Math.round(aD):'?'));
+  L.push('Avg TPA ' + (aT!=null?aT.toFixed(1):'?') + ' · Avg WPA ' + (aW!=null?aW.toFixed(1):'?'));
   L.push('');
   ps.slice(0,25).forEach((p,idx) => {
     const o = N(gi(p,'offHome')), d = N(gi(p,'defHome'));
-    const os = gi(p,'opa')||'?', ds = gi(p,'dpa')||'?';
+    const os = paOf(p,'offHome')!=null?Math.round(paOf(p,'offHome')):'?', ds = paOf(p,'defHome')!=null?Math.round(paOf(p,'defHome')):'?';
     L.push('`'+String(idx+1).padStart(2)+'` **'+(p.name||'?')+'** '+N(gi(p,'land')||p.land)+'a | O '+o+' D '+d+' | '+os+'/'+ds);
   });
   L.push('');
@@ -366,22 +392,35 @@ function kdSummary(state, locOrName) {
 
 function gget(hit,k){ const p=hit.p,i=p.intel||{}; return i[k]!=null?i[k]:p[k]; }
 function surveyCard(hit){
-  const p=hit.p; const g=k=>gget(hit,k);
-  const acres=g('survAcres')||g('land')||p.land||0;
-  const B=[['bHome','Homes'],['bFarm','Farms'],['bMill','Mills'],['bBank','Banks'],['bTGs','TGs'],['bArms','Armouries'],['bRax','Barracks'],['bFort','Forts'],['bCast','Castles'],['bHosp','Hospitals'],['bGuil','Guilds'],['bTowe','Towers'],['bTDs','TDs'],['bWTs','WTs'],['bUniv','Univs'],['bLibs','Libs'],['bStab','Stables'],['bDung','Dungeons'],['bBarr','Barren']];
+  const p=hit.p; const i=p.intel||{}; const g=k=>gget(hit,k);
+  const sv=i.survey;
+  const acres=(sv&&sv.total)||g('survAcres')||g('land')||p.land||0;
   const L=['__**'+p.name+'** — Survey__ · '+N(acres)+' acres'];
-  let any=false;
-  B.forEach(([k,lbl])=>{ const v=g(k); if(v!=null&&v!==''){ const pct=acres?((Number(v)/acres*100).toFixed(1)):'?'; L.push('  '+lbl+' '+N(v)+' ('+pct+'%)'); any=true; } });
-  if(!any) L.push('_no survey data scouted_');
-  if(g('be')) L.push('BE '+g('be')+'%');
+  if(sv && sv.buildings && sv.buildings.length){
+    const shown=sv.buildings.filter(b=>Number(b.qty)>0);
+    if(shown.length) shown.forEach(b=>{ L.push('  '+b.name+' '+N(b.qty)+' ('+b.pct+'%)'); });
+    else L.push('_survey scouted but all buildings read zero_');
+    const st=sv.stats||{}; const parts=[];
+    if(st.buildEff!=null) parts.push('BE '+st.buildEff+'%');
+    if(st.workers!=null) parts.push('Workers '+N(st.workers));
+    if(st.jobs!=null) parts.push('Jobs '+N(st.jobs));
+    if(st.workersNeeded!=null) parts.push('Need '+N(st.workersNeeded));
+    if(parts.length) L.push(parts.join(' · '));
+  } else {
+    L.push('_no survey data scouted_');
+    if(g('be')) L.push('BE '+g('be')+'%');
+  }
   return L.join('\n');
 }
 function tpaCard(hit){
   const p=hit.p; const g=k=>gget(hit,k);
   const f=v=>(v!=null&&v!=='')?v:'?';
+  const land=Number(g('land')||p.land)||0;
+  const rtpa=(g('rtpa')!=null?g('rtpa'):(g('thieves')!=null&&land>0?(Number(g('thieves'))/land).toFixed(1):null));
+  const rwpa=(g('rwpa')!=null?g('rwpa'):(g('wizards')!=null&&land>0?(Number(g('wizards'))/land).toFixed(1):null));
   const L=['__**'+p.name+'** — Thievery & Magic__'];
-  L.push('**TPA**  mTPA '+f(p.mdtpa)+' · oTPA '+f(g('otpa'))+' · dTPA '+f(g('dtpa'))+' · rTPA '+f(g('rtpa')));
-  L.push('**WPA**  mWPA '+f(p.mdwpa)+' · oWPA '+f(g('owpa'))+' · dWPA '+f(g('dwpa'))+' · rWPA '+f(g('rwpa')));
+  L.push('**TPA**  mTPA '+f(p.mdtpa)+' · oTPA '+f(g('otpa'))+' · dTPA '+f(g('dtpa'))+' · rTPA '+f(rtpa));
+  L.push('**WPA**  mWPA '+f(p.mdwpa)+' · oWPA '+f(g('owpa'))+' · dWPA '+f(g('dwpa'))+' · rWPA '+f(rwpa));
   L.push('Thieves '+N(g('thieves'))+' · Wizards '+N(g('wizards'))+(g('be')?' · BE '+g('be')+'%':''));
   if(g('intelAge')!=null) L.push('_intel age: '+g('intelAge')+' ticks_');
   return L.join('\n');
@@ -627,6 +666,52 @@ function findCard(state, q){
   });
   return L.join('\n');
 }
+// Format a fractional-hour duration as "Hh Mm" (human aid; the exact value is the tick count).
+function fmtDur(hoursFloat){ const totalMin=Math.max(0,Math.round(hoursFloat*60)); const h=Math.floor(totalMin/60), mn=totalMin%60; return (h?h+'h ':'')+mn+'m'; }
+// Build the /armies card. EXACT by construction: reads the raw feed throne "Armies:" line
+// (X.XX ticks/hours left, game-rounded to 2 decimals) + the exact capture ts. 1 tick = 1 real hour
+// (empirically measured 1.000). return_unix = captureTs + daysLeft*3.6e6, accurate to ~±30s (the
+// game's 2-decimal display is the only imprecision — our pipeline adds none).
+function armiesCard(state, feed, tz){
+  const provs = (state.myKd && state.myKd.provinces) || [];
+  const now = Date.now();
+  const norm = ts => (ts>0 && ts<1e12) ? ts*1000 : ts;   // feed ts are already ms, but be safe
+  const returning=[], home=[], unknown=[];
+  for(const p of provs){
+    const pg = freshestPage(feed, p.name, '/throne');
+    if(!pg){ unknown.push(p.name); continue; }
+    const capTs = norm(pg.ts);
+    const ageH = (now - capTs)/3.6e6;
+    const m = (pg.data_simple||'').match(/Armies\s*:([^\n]*)/);
+    const armies=[];
+    if(m){ const rx=/\(([\d.]+)\s*days? left\)\s*\((\d[\d,]*)\)/g; let x; while((x=rx.exec(m[1]))!==null){ armies.push({daysLeft:parseFloat(x[1]), land:Number(x[2].replace(/,/g,''))}); } }
+    const live = armies.map(a=>({ land:a.land, remaining:a.daysLeft-ageH, retUnix:Math.round(capTs + a.daysLeft*3.6e6) })).filter(a=>a.remaining>0);
+    if(!live.length){ home.push(p.name); continue; }
+    live.sort((a,b)=>a.remaining-b.remaining);
+    returning.push({ name:p.name, capAge:freshAge(capTs), armies:live, soonest:live[0].remaining });
+  }
+  returning.sort((a,b)=>a.soonest-b.soonest);
+  const L=['__**Armies Returning — '+((state.myKd&&state.myKd.name)||'our KD')+'**__'];
+  if(returning.length){
+    for(const r of returning){
+      L.push('');
+      L.push('**'+r.name+'** — '+r.armies.length+' out _(seen '+r.capAge+')_');
+      for(const a of r.armies){
+        const secs=Math.floor(a.retUnix/1000);
+        const tzTxt = tz ? fmtInTz(a.retUnix, tz) : null;
+        L.push('  • **'+a.remaining.toFixed(2)+'** ticks left ('+fmtDur(a.remaining)+') · returns <t:'+secs+':t> · <t:'+secs+':R>'
+          + (tzTxt ? ' · '+tzTxt+' '+tz : '')
+          + ' · +'+N(a.land)+'a');
+      }
+    }
+  } else {
+    L.push('_No armies out — every scouted province is home._');
+  }
+  if(home.length) L.push('\n🏠 **Home** ('+home.length+'): '+home.join(', '));
+  if(unknown.length) L.push('\n❔ **No recent throne intel** ('+unknown.length+'): '+unknown.join(', ')+'\n_open these provinces’ throne in-game to track their armies_');
+  L.push('\n_1 tick = 1 hour. Return times exact to ~±30s (the game shows army time to 2 decimals; nothing here is rounded further). Clock times use Discord’s per-viewer local time'+(tz?' + your /settz zone ('+tz+')':' — set yours with /settz')+'._');
+  return L.join('\n');
+}
 const cmds = [
   new SlashCommandBuilder().setName('prov').setDescription('Full intel on a province').addStringOption(o=>o.setName('name').setDescription('province name').setRequired(true)),
   new SlashCommandBuilder().setName('intel').setDescription('Whole-KD overview').addStringOption(o=>o.setName('kd').setDescription('KD location e.g. 6:4').setRequired(true)),
@@ -657,7 +742,9 @@ const cmds = [
   new SlashCommandBuilder().setName('live').setDescription('Freshest live intel for a province from the feed').addStringOption(o=>o.setName('name').setDescription('province name').setRequired(true))
 , new SlashCommandBuilder().setName(`spells`).setDescription(`Active spells up + hostile on a province`).addStringOption(o=>o.setName(`name`).setDescription(`province or blank for yours`).setRequired(false))
 , new SlashCommandBuilder().setName('wars').setDescription('List all recorded wars + results')
-, new SlashCommandBuilder().setName('war').setDescription('Full breakdown of one war').addIntegerOption(o=>o.setName('id').setDescription('war number (see /wars)').setRequired(true))].map(c=>c.toJSON());
+, new SlashCommandBuilder().setName('war').setDescription('Full breakdown of one war').addIntegerOption(o=>o.setName('id').setDescription('war number (see /wars)').setRequired(true))
+, new SlashCommandBuilder().setName('settz').setDescription('Set your timezone for army return times (IANA, e.g. America/Chicago)').addStringOption(o=>o.setName('timezone').setDescription('IANA name e.g. America/Chicago, Europe/London, Australia/Sydney').setRequired(true))
+, new SlashCommandBuilder().setName('armies').setDescription('Our armies returning home — soonest first, exact ticks + return time')].map(c=>c.toJSON());
 
 
 // ===== WARLOG ATTACK POSTING (reads engine state.json - correct types, real dates) =====
@@ -1220,16 +1307,19 @@ client.on('interactionCreate', async (i) => {
     await i.deferReply();
     const pname = await resolveProvName(i, i.options.getString('name'));
     if (!pname) { await i.editReply('Link your province first with /link, or give a name.'); return; }
-    const card = await statusCard(pname);
+    const card = await statusCard(pname, findProv(state, pname));
     if (!card) { await i.editReply('No live data for "' + pname + '". View that province in-game first.'); return; }
     await i.editReply('__**' + pname + '** — Status__\n' + card);
-  } else if (i.commandName === 'status') {
+  } else if (i.commandName === 'settz') {
+    const tz = (i.options.getString('timezone')||'').trim();
+    if(!validTz(tz)){ await i.reply('❌ `'+tz+'` is not a valid IANA timezone. Examples: `America/Chicago`, `Europe/London`, `Australia/Sydney`. Full list: <https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>'); return; }
+    userTzMap[i.user.id] = tz; saveTz();
+    const nowThere = hhmmInTz(Date.now(), tz);
+    await i.reply('✅ Timezone set to `'+tz+'` — current time there is **'+nowThere+'**.');
+  } else if (i.commandName === 'armies') {
     await i.deferReply();
-    const pname = await resolveProvName(i, i.options.getString('name'));
-    if (!pname) { await i.editReply('Link your province first with /link, or give a name.'); return; }
-    const card = await statusCard(pname);
-    if (!card) { await i.editReply('No live data for "' + pname + '". View that province in-game first.'); return; }
-    await i.editReply('__**' + pname + '** — Status__\n' + card);
+    const feed = await httpGet('/feed?key=' + KEY + '&since=0');
+    await i.editReply(armiesCard(state, feed, tzOf(i.user.id)));
   } else if (i.commandName === 'wars') {
     await i.reply(warsListCard(state));
   } else if (i.commandName === 'war') {
