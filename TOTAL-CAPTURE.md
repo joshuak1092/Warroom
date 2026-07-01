@@ -94,6 +94,13 @@ stealth mana prisoners warHorses armyOut incomingLand returnTick spells[] ops[] 
       full own-KD card renders every page (explore + recent news + ritual + wizards + buildings +
       military + net@home + econ).
 
+- [x] **6. kingdom_details engine parser** — enemy KD rosters (slot/name/race/land/nw) now build
+      SERVER-SIDE with zero browsers (matched by loc, no dupes). OUR OWN KD is ENRICH-ONLY
+      (updateOnly: update race/land/nw of existing provinces, never add/remove/reduce) because the
+      engine bypasses the server's anti-wipe firewalls — identity by number, not name. Verified:
+      full 1810-entry replay, 0 errors, myKd held at 20 across 264 kingdom_details captures, enemy
+      KDs 43→46 built from scratch. Closes the last "browser-only" gap.
+
 ## Ground rules
 - Every step: back up touched files, `node --check`, show diff, apply to BOTH HTMLs + engine.
 - **Never restart pm2 / reboot droplet without explicit OK.**
