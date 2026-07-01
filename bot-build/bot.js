@@ -326,12 +326,17 @@ function provCard(hit) {
   L.push('**Military**');
   L.push('  Off ' + N(g('offHome')) + ' · Def ' + N(g('defHome')) + (g('ome')?' · OME '+g('ome')+'%':'') + (g('dme')?' · DME '+g('dme')+'%':''));
   L.push('  OSPA ' + (_opa||'?') + ' · DSPA ' + (_dpa||'?'));
+  const _mil=[]; if(g('generals')!=null)_mil.push('Gens '+g('generals')); if(g('soldiers')!=null)_mil.push('Sol '+N(g('soldiers'))); if(g('offSpecs')!=null)_mil.push('OSpec '+N(g('offSpecs'))); if(g('defSpecs')!=null)_mil.push('DSpec '+N(g('defSpecs'))); if(g('elites')!=null)_mil.push('Elite '+N(g('elites'))); if(g('warHorses')!=null)_mil.push('WH '+N(g('warHorses')));
+  if(_mil.length) L.push('  '+_mil.join(' · '));
+  if(p.armyOut && i.armyReturnDays && i.armyReturnDays.length) L.push('  🏹 Army out · returns '+i.armyReturnDays.map(x=>x+'d').join('/')+(p.incomingLand?' · +'+N(p.incomingLand)+'a incoming':''));
   L.push('**Thievery / Magic**');
   L.push('  mTPA ' + (p.mdtpa||'?') + ' · oTPA ' + (g('otpa')||'?') + ' · dTPA ' + (g('dtpa')||'?') + ' · rTPA ' + (_rtpa||'?'));
   L.push('  mWPA ' + (p.mdwpa||'?') + ' · oWPA ' + (g('owpa')||'?') + ' · dWPA ' + (g('dwpa')||'?') + ' · rWPA ' + (_rwpa||'?'));
   L.push('  Thieves ' + N(g('thieves')) + ' · Wizards ' + N(g('wizards')) + (g('be')?' · BE '+g('be')+'%':''));
   L.push('**Economy**');
   L.push('  Gold ' + N(g('gcs')) + ' · Food ' + N(g('food')) + ' · Runes ' + N(g('runes')) + ' · Peons ' + N(g('peons')));
+  if (i.science && i.science.length) { L.push('**Science**'); L.push('  ' + i.science.map(s=>s.name+' '+(s.effect>=0?'+':'')+s.effect+'%').join(' · ')); }
+  if (i.survey && i.survey.buildings && i.survey.buildings.length) { const sv=i.survey; L.push('**Buildings** ('+N(sv.total)+'a'+(sv.stats&&sv.stats.buildEff!=null?', '+sv.stats.buildEff+'% eff':'')+')'); L.push('  ' + sv.buildings.filter(b=>b.qty>0).map(b=>b.name+' '+N(b.qty)+' ('+b.pct+'%)').join(' · ')); }
   const age = g('intelAge');
   if (age != null) L.push('_intel age: ' + age + ' ticks_');
   return L.join('\n');
@@ -725,14 +730,36 @@ function vpParseOp(prov, body, url){
   prov=String(prov||'?'); body=String(body||''); url=String(url||'');
   var om=url.match(/[?&]o=([A-Za-z_]+)/); if(om==null) return null;
   var op=om[1].toLowerCase().split('_').map(function(w,wi){ if(wi>0 && /^(on|the|of|a|an|to|in|at|by|for|from)$/.test(w)) return w; return w?(w.charAt(0).toUpperCase()+w.slice(1)):w; }).join(' ');
-  var tm=body.match(/The Province of (.+?)\s*\((\d+:\d+)\)/i);
+  // Resolve target province across ALL op types (each op names the target differently).
+  var tm=body.match(/The Province of (.+?)\s*\((\d+:\d+)\)/i)            // SPY_ON_THRONE
+       ||body.match(/Military Elders of (.+?)\s*\((\d+:\d+)\)/i)         // SPY_ON_MILITARY
+       ||body.match(/research centers of (.+?)\s*\((\d+:\d+)\)/i)        // SPY_ON_SCIENCES
+       ||body.match(/Thieves'? Guilds? of (.+?)\s*\((\d+:\d+)\)/i)       // INFILTRATE
+       ||body.match(/scour the lands of (.+?)\s*\((\d+:\d+)\)/i)         // SURVEY
+       ||body.match(/exploration activities of (.+?)\s*\((\d+:\d+)\)/i); // SPY_ON_EXPLORATION
   var tgt=tm?(tm[1].trim()+' ('+tm[2]+')'):'';
+  if(tgt===''){ // fallback (covers foiled ops, which carry no province prose): op-planner echo
+    var spm=body.match(/Select province:\s*\d*\s*(.+?)\s*(?:---|\(|\n|\r|$)/);
+    var tkm=body.match(/Target kingdom is .+?\((\d+:\d+)\)/i);
+    if(spm) tgt=spm[1].trim()+(tkm?(' ('+tkm[1]+')'):'');
+  }
   var dm=body.match(/(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d+\s+of\s+YR\d+/);
   var dt=dm?dm[0].replace(/[^a-z0-9]/gi,''):'';
   var qm=url.match(/[?&]q=(\d+)/); var sent=qm?qm[1].replace(/(\d)(?=(\d{3})+$)/g,'$1,'):'';
-  var fail=/unsuccessful|were caught|were captured|could not|failed to|we were unable|caught by|foiled|thwarted/i.test(body);
+  var fail=/unsuccessful|were caught|were captured|could not|failed to|we were unable|caught by|foiled|thwarted|mission was foiled/i.test(body);
   var mark=fail?'\u274c':'\u2705';
-  var lm=body.match(/we lost ([0-9,]+) thie/i); var lost=lm?lm[1]:''; var tail = fail ? (' \u00b7 foiled'+(lost?(' \u2014 lost '+lost+' thieves'):'')) : (sent?(' \u00b7 '+sent+' sent'):'');
+  // Headline datum per op so the bot actually registers what was learned.
+  var data='', g; var oc=om[1].toUpperCase();
+  if(!fail){
+    if(oc==='INFILTRATE'){ if((g=body.match(/about ([\d,]+) thieves/i))) data=g[1]+' thieves'; }
+    else if(oc==='SPY_ON_MILITARY'){ var off=body.match(/Net Offensive Points at Home\s+([\d,]+)/i), def=body.match(/Net Defensive Points at Home\s+([\d,]+)/i), dd=[]; if(off)dd.push('off '+off[1]); if(def)dd.push('def '+def[1]); data=dd.join(' / '); }
+    else if(oc==='SPY_ON_SCIENCES'){ var srx=/([A-Za-z]+)\s+([\d,]+)\s+([+-]?[\d.]+)%\s*([^\n\r]*)/g, sm2, sl=[]; while((sm2=srx.exec(body))){ var de=(sm2[4]||'').trim(); if(/scientist|generation|available|per acre|book/i.test(de)) continue; var ef=parseFloat(sm2[3]); sl.push(sm2[1]+' '+(ef>=0?'+':'')+ef+'%'); } data=sl.length?sl.join(' \u00b7 '):(/Current Effects of Science/i.test(body)?'sciences':''); }
+    else if(oc==='SURVEY'){ var be=body.match(/Building Efficiency\s+([\d.]+)%/i); data=be?('BE '+be[1]+'%'):(/Building type\s+Quantity/i.test(body)?'buildings':''); }
+    else if(oc==='SPY_ON_THRONE'){ var nw=body.match(/Networth\s+([\d,]+)/i), land=body.match(/Land\s+([\d,]+)/i), dd3=[]; if(land)dd3.push(land[1]+' ac'); if(nw)dd3.push('NW '+nw[1]); data=dd3.join(' \u00b7 '); }
+    else if(oc==='SPY_ON_DEFENSE'){ if((g=body.match(/([\d,]+)\s+defense points/i))) data=g[1]+' def'; }
+    else if(oc==='SPY_ON_EXPLORATION'){ if((g=body.match(/exploring\s+([\d,]+)\s+acres/i)||body.match(/([\d,]+)\s+acres/i))) data=g[1]+' ac exploring'; }
+  }
+  var lm=body.match(/we lost ([0-9,]+) thie/i); var lost=lm?lm[1]:''; var tail = fail ? (' \u00b7 foiled'+(lost?(' \u2014 lost '+lost+' thieves'):'')) : ((sent?(' \u00b7 '+sent+' sent'):'')+(data?(' \u2014 '+data):''));
   return {kind:'op', sig:'vp:op:'+prov.toLowerCase()+':'+om[1].toLowerCase()+':'+(tm?tm[2]:'')+':'+dt, msg:mark+' '+vpWho(prov)+' \u2014 '+op+(tgt?(' \u2192 '+tgt):'')+tail};
 }
 function vpParseKdNews(txt, maxYR){

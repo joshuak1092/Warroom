@@ -164,6 +164,7 @@ module.exports = {
       if ((m = t.match(/([\d,]+) soldiers, ([\d,]+) offensive specialists, ([\d,]+) defensive specialists, ([\d,]+) elites and ([\d,]+) war horses/i))) {
         intel.soldiers = N(m[1]); intel.offSpecs = N(m[2]); intel.defSpecs = N(m[3]); intel.elites = N(m[4]); intel.warHorses = N(m[5]);
       }
+      if ((m = t.match(/Generals\s+([\d,]+)/i))) intel.generals = N(m[1]);
       const days = []; let dm2, drx = /\(([\d.]+)\s*days?\s*left\)/gi; while ((dm2 = drx.exec(t)) !== null) days.push(parseFloat(dm2[1]));
       const cl = t.match(/Captured Land\s+([-\d,\t ]+)/i);
       let inc = 0; if (cl) (cl[1].match(/[\d,]+/g) || []).forEach(x => inc += (N(x) || 0));
