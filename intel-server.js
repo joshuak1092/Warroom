@@ -70,6 +70,26 @@ http.createServer((req,res)=>{
             return res.end(JSON.stringify({error:"save blocked — myKd provinces would drop from "+curN+" to "+myN+" (looks like a wipe). Add ?force=1 to override on purpose.", current:curN, incoming:myN}));
           }
         }
+        // FIREWALL: identity is the KD NUMBER (loc), never the name. Names change all age;
+        // the number does not. Block replacing our kingdom with a different-numbered one.
+        if(u.searchParams.get("force")!=="1" && inc.myKd){
+          let curLoc=""; try{ curLoc=(((readState().myKd)||{}).loc||"").trim(); }catch(e){}
+          const incLoc=((inc.myKd.loc)||"").trim();
+          if(curLoc && /^\d{1,2}:\d{1,2}$/.test(curLoc) && incLoc!==curLoc){
+            res.writeHead(409,{"Content-Type":"application/json"});
+            return res.end(JSON.stringify({error:"save blocked — myKd number would change from "+curLoc+" to '"+(incLoc||"(blank)")+"'. Your kingdom is identified by its kd number, not its name. Add ?force=1 if you truly switched kingdoms.", current:curLoc, incoming:incLoc}));
+          }
+        }
+        // FIREWALL: block enemy-shaped data being saved into myKd (the "my provs went empty" bug).
+        // Our provinces always carry generals>=1; enemy intel provinces do not.
+        if(u.searchParams.get("force")!=="1" && inc.myKd){
+          const mps=inc.myKd.provinces||[];
+          const noGen=mps.filter(p=>!(Number(p&&p.generals)>=1)).length;
+          if(mps.length>=8 && noGen>Math.floor(mps.length*0.5)){
+            res.writeHead(409,{"Content-Type":"application/json"});
+            return res.end(JSON.stringify({error:"save blocked — "+noGen+" of "+mps.length+" myKd provinces have no generals; this looks like enemy intel imported into My Kingdom, not your own KD. Add ?force=1 to override.", noGenerals:noGen, total:mps.length}));
+          }
+        }
         // VALIDATION GUARD: block saving scattered/junk KD data
         if(u.searchParams.get("force")!=="1" && inc.myKd){
           const provs=inc.myKd.provinces||[];
@@ -91,7 +111,20 @@ http.createServer((req,res)=>{
             return res.end(JSON.stringify({error:"save blocked — data failed validation", problems:problems, hint:"fix the data, or add ?force=1 to override"}));
           }
         }
-        inc=sanitizeState(inc); writeState(inc); lastSaveTime=new Date().toISOString(); broadcast("state");
+        inc=sanitizeState(inc);
+        // POST-SANITIZE FIREWALL: dedupeProvs silently strips provinces with no race / land<=0.
+        // A malformed import can pass the pre-checks (count looks fine) then get cleaned down to ~0.
+        // Re-check the CLEANED count so a junk import can never zero an established kingdom.
+        const postN=(inc.myKd&&inc.myKd.provinces||[]).length;
+        let curN3=0; try{ const _c=readState(); curN3=(_c.myKd&&_c.myKd.provinces||[]).length; }catch(e){}
+        if(u.searchParams.get("force")!=="1" && curN3>=8 && postN<=Math.floor(curN3*0.5)){
+          try{ fs.appendFileSync("save-debug.log", new Date().toISOString()+" BLOCKED-postsanitize pre="+myN+" post="+postN+" cur="+curN3+" firstKeys="+JSON.stringify(Object.keys((inc.myKd.provinces&&inc.myKd.provinces[0])||{}))+"\n"); }catch(e){}
+          res.writeHead(409,{"Content-Type":"application/json"});
+          return res.end(JSON.stringify({error:"save blocked — after cleanup your kingdom would drop from "+curN3+" to "+postN+" provinces. The imported rows were malformed (missing race or land columns) and got stripped. Fix the CSV headers and re-import. Add ?force=1 to override.", current:curN3, cleaned:postN, incoming:myN}));
+        }
+        // DEBUG (temporary): log the shape of each real change so the import format can be diagnosed.
+        if(postN!==curN3){ try{ fs.appendFileSync("save-debug.log", new Date().toISOString()+" CHANGE pre="+myN+" post="+postN+" cur="+curN3+" name="+((inc.myKd&&inc.myKd.name)||"")+" firstProv="+JSON.stringify((inc.myKd.provinces&&inc.myKd.provinces[0])||{}).slice(0,500)+"\n"); }catch(e){} }
+        writeState(inc); lastSaveTime=new Date().toISOString(); broadcast("state");
         res.writeHead(200,{"Content-Type":"application/json"});
         return res.end(JSON.stringify({success:true,saved:true,myprovs:(inc.myKd&&inc.myKd.provinces||[]).length,enemies:Object.keys(inc.enemies||{}).length}));
       }

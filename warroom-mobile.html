@@ -2729,9 +2729,17 @@ function doImportMy(){
   if(!txt){ toast("Paste or drop your kingdom CSV first."); return; }
   const {objs}=rowsToObjects(txt);
   if(!objs.length){ toast("Couldn't find any rows. Make sure the first line is a header with a 'province' column."); return; }
-  const provs=objs.map(o=>({id:uid(),name:o.name||"Unnamed",ruler:o.ruler||"",race:o.race||"",pers:o.pers||"",
+  // FIREWALL: your kingdom is identified by its KD NUMBER, not its name. Refuse a CSV whose number isn't yours.
+  const _ourLoc=((STATE.myKd&&STATE.myKd.loc)||"").trim();
+  const _foreign=[...new Set(objs.map(o=>(o.kdloc||"").trim()).filter(Boolean))].filter(l=>l!==_ourLoc);
+  if(_ourLoc && _foreign.length){ toast("Blocked: this CSV is for KD "+_foreign.join(", ")+", not your kingdom ("+_ourLoc+"). Use the enemy import for other kingdoms."); return; }
+  // FIREWALL: don't silently replace an established kingdom with provinces that match none of your current ones.
+  const _curNames=new Set((STATE.myKd&&STATE.myKd.provinces||[]).map(p=>(p.name||"").toLowerCase()));
+  const _overlap=objs.filter(o=>_curNames.has((o.name||"").toLowerCase())).length;
+  if(_curNames.size>=8 && _overlap===0 && !confirm("This replaces all "+_curNames.size+" of your provinces with "+objs.length+" that match none of your current provinces — looks like the wrong CSV. Import anyway?")) return;
+  const provs=objs.map(o=>({id:uid(),name:o.name||"Unnamed",ruler:o.ruler||"",race:wrRacePers(o).race,pers:wrRacePers(o).pers,
     land:num(o.land),nw:num(o.nw),offense:num(o.offense),defense:num(o.defense),
-    generals:Math.max(1,Math.min(MAX_GENERALS,(o.generals!==undefined&&o.generals!==""?num(o.generals):(STATE.settings.defGenerals+((o.pers||"").toLowerCase()==="general"?1:0))))),
+    generals:Math.max(1,Math.min(MAX_GENERALS,(o.generals!==undefined&&o.generals!==""?num(o.generals):(STATE.settings.defGenerals+((wrRacePers(o).pers||"").toLowerCase()==="general"?1:0))))),
     fana:parseBool(o.fana),bl:parseBool(o.bl),fanaOn:false,blOn:false,sci:grabSci(o)}));
   mutate(()=>{STATE.myKd.provinces=provs;VIEW="mykd";});
   save(); toast(`Imported ${provs.length} provinces into ${STATE.myKd.name}.`);
@@ -2742,8 +2750,28 @@ function grabSci(o){ const s={}; let any=false; SCI_KEYS.forEach(k=>{ if(o[k]!==
   return any?s:null; }
 const COLMAP={army:"army",allarmies:"allArmies",off:"off",def:"def",offhome:"offHome",defhome:"defHome",somdef:"somDef",osoff:"osOff",dsdef:"dsDef",ome:"ome",dme:"dme",opa:"opa",dpa:"dpa",os:"os",ds:"ds",leets:"leets",horses:"horses",solds:"solds",military:"military",ostrain:"osTrain",dstrain:"dsTrain",elitetrain:"eliteTrain",prisoners:"prisoners",thv:"thieves",wiz:"wizards",rtpa:"rtpa",otpa:"otpa",dtpa:"dtpa",rwpa:"rwpa",owpa:"owpa",dwpa:"dwpa",thieftrain:"thiefTrain",be:"be",home:"bHome",farm:"bFarm",mill:"bMill",bank:"bBank",tgs:"bTGs",arms:"bArms",rax:"bRax",fort:"bFort",cast:"bCast",hosp:"bHosp",guil:"bGuil",towe:"bTowe",tds:"bTDs",wts:"bWTs",univ:"bUniv",libs:"bLibs",stab:"bStab",dung:"bDung",barr:"bBarr",sur:"survAcres",stocked:"stocked",allocated:"allocated",alche:"sAlche",tools:"sTools",housi:"sHousi",produ:"sProdu",bookk:"sBookk",artis:"sArtis",strat:"sStrat",siege:"sSiege",tacti:"sTacti",valor:"sValor",heroi:"sHeroi",resil:"sResil",crime:"sCrime",chann:"sChann",shiel:"sShiel",cunni:"sCunni",sorce:"sSorce",fines:"sFines",gcs:"gcs",gcpa:"gcpa",food:"food",runes:"runes",tb:"tb",peons:"peons",ppa:"ppa",nonpeon:"nonpeon",sos:"sos",infil:"infil",som:"som",intelage:"intelAge",nwpa:"nwpa",poppct:"poppct"};
 function buildFullIntel(o){ const intel={}; if(o.__raw && o.__headers){ o.__headers.forEach((nh,i)=>{ if(COLMAP[nh]){ const v=o.__raw[i]; if(v!==undefined&&String(v).trim()!=="") intel[COLMAP[nh]]=num(v); } }); const mi=o.__headers.indexOf("map"); if(mi>=0&&o.__raw[mi]) intel.map=String(o.__raw[mi]).trim(); } return intel; }
+// Personality often ships inside a "combo" column as "Race / Personality", sometimes as short
+// codes (e.g. "Hu/Ro" = Human/Rogue). Split it (race first) and expand codes to the app's canonical names.
+function wrExpand(tok,list){
+  var t=(tok||"").trim(); if(!t) return "";
+  var k=t.toLowerCase().replace(/[^a-z]/g,""); if(!k) return t;
+  var exact=list.filter(function(n){return n.toLowerCase()===t.toLowerCase();});
+  if(exact.length) return exact[0];
+  var hits=list.filter(function(n){return n.toLowerCase().replace(/[^a-z]/g,"").indexOf(k)===0;});
+  return hits.length?hits[0]:t;
+}
+function wrRacePers(o){
+  var race=(o.race||"").trim(), pers=(o.pers||"").trim(), combo=(o.combo||"").trim();
+  if((!race||!pers) && combo){
+    var parts=combo.split(/[\/|,]|\s[-–—]\s/).map(function(s){return s.trim();}).filter(Boolean);
+    if(parts.length<2) parts=combo.split(/\s+/);
+    if(!race) race=parts[0]||"";
+    if(!pers) pers=parts.slice(1).join(" ").trim();
+  }
+  return {race:wrExpand(race,RACES), pers:wrExpand(pers,PERS)};
+}
 function buildEnemyProvs(objs){
-  return objs.map(o=>({intel:buildFullIntel(o),id:uid(),name:o.name||"Unnamed",ruler:o.ruler||"",race:o.race||"",pers:o.pers||"",combo:o.combo||"",
+  return objs.map(o=>({intel:buildFullIntel(o),id:uid(),name:o.name||"Unnamed",ruler:o.ruler||"",race:wrRacePers(o).race,pers:wrRacePers(o).pers,combo:o.combo||"",
     land:num(o.land),nw:num(o.nw),honor:num(o.honor),
     offense:num(o.offense)||num(o.offhome),defense:num(o.defense)||num(o.defhome),
     offHome:num(o.offhome),defHome:num(o.defhome),somDef:num(o.somdef),ome:num(o.ome),dme:num(o.dme),army:num(o.army),allArmies:num(o.allarmies),
@@ -2768,6 +2796,7 @@ function doImportEnemy(merge){
     mutate(()=>{
       for(const key in byKd){
         const realLoc=key==="_none"?"":key;
+        if(realLoc && homeLoc && realLoc===homeLoc) continue; // FIREWALL: never ingest our own kd number as an enemy
         // HOME-FOLD REMOVED: enemy imports never touch myKd.
         let kd=realLoc?Object.values(STATE.enemies).find(e=>(e.loc||"")===realLoc):null;
         if(!kd){ const nid=uid(); kd={id:nid,name:"KD "+(realLoc||"?"),loc:realLoc,status:"available",warMode:"out",eowcfExit:"",note:"",wave:[],provinces:[],_rev:Date.now()}; STATE.enemies[nid]=kd; }
