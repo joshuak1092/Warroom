@@ -100,8 +100,11 @@
       if (M.peasants != null) it.peasants = numI(M.peasants);
       if (M.trainCredits != null) it.trainCredits = numI(M.trainCredits);
       if (M.units && M.units.length) it.units = M.units;
-      if (M.offHome != null) { it.offHome = numI(M.offHome); if (it.offHome != null) p.offense = it.offHome; }
-      if (M.defHome != null) { it.defHome = numI(M.defHome); if (it.defHome != null) p.defense = it.defHome; }
+      // Net-at-home points are DISPLAY-only for own provinces: p.offense/p.defense stay the
+      // throne "Off./Def. Points" base that effOffense() applies persona bonuses to. (Enemy
+      // scout.js sets p.offense from net itself and doesn't go through here.)
+      if (M.offHome != null) it.offHome = numI(M.offHome);
+      if (M.defHome != null) it.defHome = numI(M.defHome);
       if (M.armyReturnDays && M.armyReturnDays.length) { it.armyReturnDays = M.armyReturnDays; p.armyOut = true; }
       if (M.armyOut != null) p.armyOut = !!M.armyOut;
       if (M.incomingLand != null) p.incomingLand = numI(M.incomingLand);

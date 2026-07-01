@@ -77,8 +77,13 @@ stealth mana prisoners warHorses armyOut incomingLand returnTick spells[] ops[] 
       Proven end-to-end: an engine-style atomic write triggered a `state` broadcast with no
       browser involved. ⚠️ needs `pm2 restart warroom-server` to take effect (HTML changes are
       live on reload — server reads them fresh per request).
-- [ ] **4. New parsers, batch 1** — enchantment (wizards/mystics), council_state (state),
-      council_military (generals).
+- [x] **4. New parsers, batch 1** — enchantment (wizards/mana/runes), council_state (pop +
+      networth/land/honor + intel.econ: income/wages/jobs/employment/maxpop/army), council_military
+      (OME/DME, net off/def @home, generals-available, war horses, army-out). All route via
+      mergeIntel; no URL-match collisions (verified). council_military's net-at-home is DISPLAY
+      only — decoupled `offHome→p.offense` in mergeIntel so effOffense() base stays the throne
+      Off. Points (no double-count); card shows a "Net@home OFF/DEF" line. Verified by replay +
+      render of real samples.
 - [ ] **5. New parsers, batch 2** — rituals, dragons, aid, explore, uniques, province_news.
 
 ## Ground rules
