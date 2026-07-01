@@ -1382,15 +1382,23 @@ function saveIntelNote(v){ if(intelSubProv){ intelSubProv.note=v; const t=docume
 function findProvAny(id){ let p=(STATE.myKd.provinces||[]).find(x=>x.id===id); if(p) return p; for(const e of Object.values(STATE.enemies||{})){ p=(e.provinces||[]).find(x=>x.id===id); if(p) return p; } return null; }
 function intelTabsModal(p){
   intelSubProv=p; const d=p.raw||{};
-  if(!Object.keys(d).length){ return provDetail(p); }
+  if(!Object.keys(d).length){
+    const it=p.intel||{};
+    if(it.throne||it.survey||(it.science&&it.science.length)||it.ome!=null||it.generals!=null||it.thieves!=null||it.warHorses!=null){
+      return '<div class="mh"><h3>'+esc(p.name)+' — intel</h3><button class="close" data-act="closemodal">×</button></div>'+enemyIntelHtml(p);
+    }
+    return provDetail(p);
+  }
   const tab=Math.min(intelSubTab,ITABS.length-1);
   let h="<div class=\"mh\"><h3>"+iFmt(d["Name"]||p.name)+" <span class=\"tag\" style=\"color:var(--gold2)\">"+iFmt(d["Kd #"]||"")+"</span> <span class=\"tag\" style=\"color:var(--teal2)\">"+iFmt(d["Race"]||p.race)+"</span> <span class=\"tag\" style=\"color:var(--blue)\">"+iFmt(d["Personality"]||p.pers)+"</span></h3><button class=\"close\" data-act=\"closemodal\">×</button></div>";
-  h+="<div class=\"itabs\">"+ITABS.map((t,i)=>"<button data-act=\"intelsub:"+i+"\" class=\""+(i===tab?"on":"")+"\">"+t[0]+"</button>").join("")+"</div>";
-  const def=ITABS[tab]; let body;
-  if(def[1]==="__BLD__") body=iBldHtml(d);
-  else if(def[1]==="__NOTES__") body=iNotesHtml(p,d);
-  else { const cols=def[1]; body="<div class=\""+(cols.length>6?"icols":"")+"\">"+cols.map(k=>iRow(k,iVal(d,k))).join("")+"</div>"; }
-  h+="<div class=\"igrid\">"+body+"</div>";
+  const sections=ITABS.map(function(def){
+    let body;
+    if(def[1]==="__BLD__") body=iBldHtml(d);
+    else if(def[1]==="__NOTES__") body=iNotesHtml(p,d);
+    else { const cols=def[1]; body="<div class=\""+(cols.length>6?"icols":"")+"\">"+cols.map(k=>iRow(k,iVal(d,k))).join("")+"</div>"; }
+    return "<div style=\"margin-top:15px\"><div style=\"color:var(--gold2);font-weight:700;font-size:12.5px;letter-spacing:.03em;text-transform:uppercase;margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,.10)\">"+def[0]+"</div>"+body+"</div>";
+  }).join("");
+  h+="<div class=\"igrid\">"+sections+"</div>";
   return h;
 }
 function provDetail(p){const m=p.military||{};const land=Number(p.land)||0;const lc=n=>(Number(n)||0).toLocaleString();const pa=n=>land?(Number(n)/land).toFixed(2):"—";const u=(m.units||[]).map(x=>`<tr><td class="l">${x.name}</td><td class="num">${x.off}/${x.def}</td><td class="num">${lc(x.own)}</td><td class="num" style="color:var(--gold2)">${pa(x.own)}</td><td class="num">${x.training?lc(x.training):"—"}</td></tr>`).join("");const cell=(k,v,r)=>`<div class="sumcell"><div class="k">${k}</div><div class="v">${lc(v)}</div>${r?`<div class="k" style="color:var(--gold2)">${pa(v)}/ac</div>`:""}</div>`;const mil=m.units&&m.units.length?`<div class="sumbar">${cell("Off specs",m.offSpecs,1)}${cell("Def specs",m.defSpecs,1)}${cell("Elites",m.elites,1)}${cell("Thieves",m.thieves,1)}${cell("Wizards",m.wizards,1)}${cell("Soldiers",m.soldiers,0)}${cell("Credits",m.credits,0)}</div><table><thead><tr><th class="l">Unit</th><th>Off/Def</th><th>Owned</th><th>/Acre</th><th>Training</th></tr></thead><tbody>${u}</tbody></table><div class="note">Pop ${lc(m.totalPop)} · mil ${lc(m.milPop)} · peasants ${lc(m.peasants)} · land ${lc(land)}${m.draftRate?(" · draft: "+m.draftRate):""}</div>`:`<div class="empty">No military capture yet — open the Military page in-game and it will fill in within a minute.</div>`;return `<div class="mh"><h3>${p.name} — detail</h3><button class="close" data-act="closemodal">×</button></div><div style="margin:4px 0 10px;color:var(--gold2);font-weight:600">⚔ Military</div>${mil}${typeof attackSection==="function"?attackSection(p):""}${typeof buildSection==="function"?buildSection(p):""}${typeof sciSection==="function"?sciSection(p):""}`;}
@@ -2305,7 +2313,7 @@ function confirmDo(msg, fn, yesLabel){
 }
 document.addEventListener("click",ev=>{
   const t=ev.target.closest("[data-act]"); if(!t)return;
-  const act=t.dataset.act; if(!act)return;if(act.indexOf("provdetail:")===0){var pp=mp(act.slice(11));if(pp)openModal(provDetail(pp));return;}
+  const act=t.dataset.act; if(!act)return;if(act.indexOf("provdetail:")===0){var pp=mp(act.slice(11));if(pp)openModal(intelTabsModal(pp));return;}
   const [cmd,arg]=act.split(":");
   switch(cmd){
     case "menu": document.body.classList.toggle("menu-open"); break;
