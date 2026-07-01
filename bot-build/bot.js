@@ -446,22 +446,43 @@ function boardCard(state, off, q){
   if(unscryed.length){ L.push(''); L.push(':white_circle: **Unscryed** ('+unscryed.length+') \u2014 spy these'); unscryed.sort((a,b)=>b.land-a.land).slice(0,8).forEach((x,i)=>L.push('`'+String(i+1).padStart(2)+'` '+x.p.name+' \u2014 '+N(x.land)+'a \u00b7 NW '+N(x.p.nw)+flag(x))); }
   return L.join('\n');
 }
+// /kdtpa + /kdwpa: aligned monospace table \u2014 per-prov Raw + Mod, KD avg, total
+// thieves/wizards, high/low. KD arg = ours or an enemy loc. Enemy: real where
+// scryed, '?' where not (unscryed provinces listed by name below the table).
 function kdMagicCard(state, q, metric){
   const kd = q ? findKd(state,q) : (Object.values(state.enemies||{})[0]||null);
   if(!kd) return null;
-  const num=v=>{const n=Number(v); return isFinite(n)&&n>0?n:0;};
-  const rows=(kd.provinces||[]).map(p=>({p,tpa:num(p.tpa),wpa:num(p.wpa),mdt:num(p.mdtpa),mdw:num(p.mdwpa)}));
   const isW = metric==='wpa';
-  const raw=x=>isW?x.wpa:x.tpa, mod=x=>isW?x.mdw:x.mdt, eff=x=>mod(x)>0?mod(x):raw(x);
-  const scryed=rows.filter(x=>raw(x)>0||mod(x)>0).sort((a,b)=>eff(a)-eff(b));
-  const unscryed=rows.filter(x=>!(raw(x)>0||mod(x)>0));
-  const f=v=>v>0?v.toFixed(1):'?';
-  const cell=(r,m)=>f(r)+(m>0?'\u2192'+f(m):'');
-  const label = isW?'Magic / WPA':'Thievery / TPA';
-  const L=[':crystal_ball: **'+label+' \u2014 '+kd.name+' ('+(kd.loc||'?')+')**  _softest first \u00b7 raw\u2192mod_'];
-  scryed.slice(0,20).forEach((x,i)=>L.push('`'+String(i+1).padStart(2)+'` '+x.p.name+' \u2014 T '+cell(x.tpa,x.mdt)+' \u00b7 W '+cell(x.wpa,x.mdw)));
-  if(!scryed.length) L.push('_none scryed for '+(isW?'WPA':'TPA')+' yet \u2014 run survey + infiltrate + spy science + spy throne_');
-  if(unscryed.length){ L.push(''); L.push(':white_circle: **No '+(isW?'WPA':'TPA')+' intel** ('+unscryed.length+'): '+unscryed.slice(0,16).map(x=>x.p.name).join(', ')); }
+  const iv=(p,k)=>{const i=p.intel||{}; return i[k]!=null?i[k]:p[k];};
+  const numv=v=>{const n=Number(v); return isFinite(n)&&n>0?n:0;};
+  const rows=(kd.provinces||[]).map(p=>({ p,
+    raw: numv(isW?p.wpa:p.tpa), mod: numv(isW?p.mdwpa:p.mdtpa),
+    units: numv(iv(p, isW?'wizards':'thieves')) }));
+  const eff=x=>x.mod>0?x.mod:x.raw;
+  const scryed=rows.filter(x=>x.raw>0||x.mod>0).sort((a,b)=>eff(a)-eff(b));
+  const unscryed=rows.filter(x=>!(x.raw>0||x.mod>0));
+  const label=isW?'WPA':'TPA';
+  const emoji=isW?':crystal_ball:':':detective:';
+  const uHead=isW?'Wizards':'Thieves';
+  const d1=v=>v>0?v.toFixed(1):'?';
+  const clip=(s,n)=>{s=String(s); return s.length>n?s.slice(0,n-1)+'\u2026':s;};
+  const uCell=v=>v>0?v.toLocaleString():'?';
+  const head='#  '+'Prov'.padEnd(12)+' '+'Raw'.padStart(5)+' '+'Mod'.padStart(5)+' '+uHead.padStart(8);
+  const bar='-'.repeat(head.length);
+  const lines=[head,bar];
+  scryed.slice(0,25).forEach((x,i)=>lines.push(
+    String(i+1).padStart(2)+' '+clip(x.p.name,12).padEnd(12)+' '+d1(x.raw).padStart(5)+' '+d1(x.mod).padStart(5)+' '+uCell(x.units).padStart(8)));
+  const avg=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:0;
+  const rawsc=scryed.map(x=>x.raw).filter(v=>v>0), modsc=scryed.map(x=>x.mod).filter(v=>v>0);
+  const totUnits=rows.reduce((s,x)=>s+x.units,0);
+  lines.push(bar);
+  lines.push('   '+'KD avg'.padEnd(12)+' '+d1(avg(rawsc)).padStart(5)+' '+d1(avg(modsc)).padStart(5)+' '+uCell(totUnits).padStart(8));
+  const L=[emoji+' **'+label+' \u2014 '+kd.name+' ('+(kd.loc||'?')+')**  _softest first \u00b7 '+scryed.length+'/'+rows.length+' scryed_'];
+  L.push('```\n'+lines.join('\n')+'\n```');
+  if(scryed.length){ const lo=scryed[0], hi=scryed[scryed.length-1];
+    L.push('High '+d1(eff(hi))+' '+clip(hi.p.name,16)+' \u00b7 Low '+d1(eff(lo))+' '+clip(lo.p.name,16)); }
+  else L.push('_none scryed for '+label+' yet \u2014 run survey + infiltrate + spy science + spy throne_');
+  if(unscryed.length) L.push(':white_circle: **No '+label+' intel** ('+unscryed.length+'): '+unscryed.slice(0,16).map(x=>clip(x.p.name,16)).join(', '));
   return L.join('\n');
 }
 function myResourceCard(state, metric){
