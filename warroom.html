@@ -971,6 +971,12 @@ let expProv=null;   // expanded enemy card
       setIf(it, "soldiers", numI(M.soldiers));
       setIf(it, "offSpecs", numI(M.offSpecs)); setIf(it, "defSpecs", numI(M.defSpecs));
       setIf(it, "elites", numI(M.elites)); setIf(it, "warHorses", numI(M.warHorses));
+      // train_army extras (our own military page): keep the whole picture
+      setIf(it, "draftRate", M.draftRate);
+      if (M.totalPop != null) it.totalPop = numI(M.totalPop);
+      if (M.milPop != null) it.milPop = numI(M.milPop);
+      if (M.peasants != null) it.peasants = numI(M.peasants);
+      if (M.trainCredits != null) it.trainCredits = numI(M.trainCredits);
       if (M.units && M.units.length) it.units = M.units;
       if (M.offHome != null) { it.offHome = numI(M.offHome); if (it.offHome != null) p.offense = it.offHome; }
       if (M.defHome != null) { it.defHome = numI(M.defHome); if (it.defHome != null) p.defense = it.defHome; }
@@ -1019,7 +1025,7 @@ let expProv=null;   // expanded enemy card
 function enemyIntelHtml(p){
   const it=p.intel||{}, T=it.throne||null, f=n=>fmtK(num(n));
   const age=ts=>{ if(!ts)return ""; const s=(Date.now()-ts)/1000; return s<3600?Math.round(s/60)+"m":s<86400?Math.round(s/3600)+"h":Math.round(s/86400)+"d"; };
-  const src=p.intelType==="throne"?"Throne spy":p.intelType==="defense"?"Defense spy":p.intelType==="exploration"?"Exploration spy":p.intelType==="survey"?"Survey":p.intelType==="science"?"Spy on Science":p.intelType==="guild"?"Infiltrate":p.intelType==="military"?"Spy on Military":"Intel";
+  const src=p.intelType==="throne"?"Throne":p.intelType==="defense"?"Defense spy":p.intelType==="exploration"?"Exploration spy":p.intelType==="survey"?"Buildings":p.intelType==="science"?"Science":p.intelType==="guild"?"Infiltrate":p.intelType==="military"?"Military":p.intelType==="wizards"?"Mystics":p.intelType==="econ"?"State":"Intel";
   let h='<div style="margin-top:4px;padding:8px 10px;background:var(--bg2);border-radius:7px;font-size:12px">';
   if(p.lastScout||p.intelType) h+='<div class="note" style="margin-bottom:6px">🔎 '+src+(p.lastScout?" · "+age(p.lastScout)+" ago":"")+(it.throneDate?" · as of "+esc(it.throneDate):"")+'</div>';
   h+='<div class="lr-stats"><span>OFF <b>'+(p.offense?f(p.offense):"?")+'</b></span><span>DEF <b>'+(p.defense?f(p.defense):"?")+'</b></span><span>Land <b>'+(p.land?f(p.land):"?")+'</b></span><span>NW <b>'+(p.nw?f(p.nw):"?")+'</b></span><span>Pop <b>'+(p.pop?f(p.pop):"?")+'</b></span></div>';
@@ -1038,16 +1044,19 @@ function enemyIntelHtml(p){
     const units=Object.keys(T).filter(k=>!skip[k]);
     if(units.length)h+='<div style="margin-top:4px"><span class="note">Units: </span>'+units.map(u=>esc(u)+" <b>"+esc(T[u])+"</b>").join(" · ")+'</div>';
   }
-  if(it.thieves)h+='<div class="note" style="margin-top:4px">🥷 Thieves: '+f(it.thieves)+(p.tpa?" · TPA "+fmt1(p.tpa):"")+'</div>';
-  if(it.ome!=null||it.dme!=null||it.defSpecs!=null||it.generals!=null){const mil=[];if(it.ome!=null)mil.push("OME "+it.ome+"%");if(it.dme!=null)mil.push("DME "+it.dme+"%");if(it.generals!=null)mil.push("Gens "+it.generals);if(it.soldiers!=null)mil.push("Sol "+f(it.soldiers));if(it.offSpecs!=null)mil.push("OSpec "+f(it.offSpecs));if(it.defSpecs!=null)mil.push("DSpec "+f(it.defSpecs));if(it.elites!=null)mil.push("Elite "+f(it.elites));if(it.warHorses!=null)mil.push("WH "+f(it.warHorses));h+='<div class="lr-stats" style="margin-top:4px">'+mil.map(x=>"<span>"+x+"</span>").join("")+'</div>';}
+  if(it.thieves)h+='<div class="note" style="margin-top:4px">🥷 Thieves: '+f(it.thieves)+(p.tpa?" · TPA "+fmt1(p.tpa):"")+(p.stealth!=null?" · Stealth "+p.stealth+"%":"")+'</div>';
+  if(it.wizards||(p.wpa&&p.wpa!==""))h+='<div class="note" style="margin-top:4px">🔮 Wizards: '+(it.wizards?f(it.wizards):"?")+(p.wpa&&p.wpa!==""?" · WPA "+fmt1(p.wpa):"")+(p.mana!=null?" · Mana "+p.mana+"%":"")+'</div>';
+  if(it.ome!=null||it.dme!=null||it.defSpecs!=null||it.offSpecs!=null||it.elites!=null||it.generals!=null){const mil=[];if(it.ome!=null)mil.push("OME "+it.ome+"%");if(it.dme!=null)mil.push("DME "+it.dme+"%");if(it.generals!=null)mil.push("Gens "+it.generals);if(it.soldiers!=null)mil.push("Sol "+f(it.soldiers));if(it.offSpecs!=null)mil.push("OSpec "+f(it.offSpecs));if(it.defSpecs!=null)mil.push("DSpec "+f(it.defSpecs));if(it.elites!=null)mil.push("Elite "+f(it.elites));if(it.warHorses!=null)mil.push("WH "+f(it.warHorses));if(it.ospa!=null)mil.push("OSPA "+fmt1(it.ospa));if(it.dspa!=null)mil.push("DSPA "+fmt1(it.dspa));if(it.epa!=null)mil.push("EPA "+fmt1(it.epa));if(it.generalsAvail!=null)mil.push("Gens avail "+it.generalsAvail);h+='<div class="lr-stats" style="margin-top:4px">'+mil.map(x=>"<span>"+x+"</span>").join("")+'</div>';}
   if(p.armyOut&&it.armyReturnDays&&it.armyReturnDays.length)h+='<div class="note" style="margin-top:4px">🏹 Army out · returns in '+it.armyReturnDays.map(d=>d+"d").join(" / ")+(p.incomingLand?" · +"+f(p.incomingLand)+" ac incoming":"")+'</div>';
-  if(it.science&&it.science.length)h+='<div style="margin-top:4px;line-height:1.8"><span class="note">📚 Science: </span>'+it.science.map(s=>esc(s.name)+" <b>"+(s.effect>=0?"+":"")+s.effect+"%</b>"+(s.books?" <span class=\"note\">("+f(s.books)+" bk)</span>":"")).join(" · ")+'</div>';
-  if(it.survey&&it.survey.buildings&&it.survey.buildings.length){const sv=it.survey,bd=sv.buildings.filter(b=>b.qty>0);h+='<div style="margin-top:4px;line-height:1.8"><span class="note">🏗 Buildings ('+f(sv.total)+" ac"+(sv.stats&&sv.stats.buildEff!=null?", "+sv.stats.buildEff+"% eff":"")+'): </span>'+bd.map(b=>esc(b.name)+" <b>"+f(b.qty)+"</b> "+fmt1(b.pct)+"%").join(" · ")+'</div>';if(sv.stats){const ss=[];if(sv.stats.workers!=null)ss.push("Workers "+f(sv.stats.workers));if(sv.stats.jobs!=null)ss.push("Jobs "+f(sv.stats.jobs));if(sv.stats.workersNeeded!=null)ss.push("Need "+f(sv.stats.workersNeeded));if(ss.length)h+='<div class="note" style="margin-top:2px">'+ss.join(" · ")+'</div>';}}
+  if(it.science&&it.science.length)h+='<div style="margin-top:4px;line-height:1.8"><span class="note">📚 Science'+(it.scientistGen!=null?" (gen "+it.scientistGen+"%"+(it.nextCat?", next "+esc(it.nextCat):"")+")":"")+': </span>'+it.science.map(s=>esc(s.name)+" <b>"+(s.effect>=0?"+":"")+s.effect+"%</b>"+(s.books?" <span class=\"note\">("+f(s.books)+" bk)</span>":"")).join(" · ")+'</div>';
+  if(it.survey&&it.survey.buildings&&it.survey.buildings.length){const sv=it.survey,bd=sv.buildings.filter(b=>b.qty>0);h+='<div style="margin-top:4px;line-height:1.8"><span class="note">🏗 Buildings ('+f(sv.total)+" ac"+(sv.stats&&sv.stats.buildEff!=null?", "+sv.stats.buildEff+"% eff":"")+'): </span>'+bd.map(b=>esc(b.name)+" <b>"+f(b.qty)+"</b> "+fmt1(b.pct)+"%").join(" · ")+'</div>';if(sv.stats){const ss=[];if(sv.stats.workers!=null)ss.push("Workers "+f(sv.stats.workers));if(sv.stats.jobs!=null)ss.push("Jobs "+f(sv.stats.jobs));if(sv.stats.workersNeeded!=null)ss.push("Need "+f(sv.stats.workersNeeded));if(ss.length)h+='<div class="note" style="margin-top:2px">'+ss.join(" · ")+'</div>';}if(sv.underConstruction&&sv.underConstruction.length)h+='<div class="note" style="margin-top:2px">🔨 Building: '+sv.underConstruction.map(function(b){return esc(b.name)+" +"+f(b.qty);}).join(" · ")+'</div>';}
   const fl=[];
   if(it.ritual)fl.push("✴ "+esc(it.ritual.name)+" "+it.ritual.eff+"% ("+it.ritual.days+"d)");
   if(it.plague)fl.push("☣ Plague");
   if(it.warWith)fl.push("⚔ war vs "+esc(it.warWith.name));
   if(fl.length)h+='<div class="note" style="margin-top:4px">'+fl.join(" · ")+'</div>';
+  if(it.econ){const ec=it.econ,eco=[];if(ec.income!=null)eco.push("Income "+f(ec.income));if(ec.wages!=null)eco.push("Wages "+f(ec.wages));if(ec.money!=null)eco.push("GC "+f(ec.money));if(ec.food!=null)eco.push("Food "+f(ec.food));if(ec.runes!=null)eco.push("Runes "+f(ec.runes));if(ec.tradeBalance!=null)eco.push("TB "+f(ec.tradeBalance));if(eco.length)h+='<div class="lr-stats" style="margin-top:4px">'+eco.map(x=>"<span>"+x+"</span>").join("")+'</div>';}
+  if(p.spells&&p.spells.length)h+='<div class="note" style="margin-top:4px">✦ Spells: '+p.spells.map(s=>esc(s.name)+(s.days?" ("+s.days+"d)":"")).join(" · ")+'</div>';
   h+='<div class="lr-stats" style="margin-top:4px"><span>mdTPA <b>'+(p.mdtpa!=null&&p.mdtpa!==""?fmt1(p.mdtpa):"?")+'</b></span><span>mdWPA <b>'+(p.mdwpa!=null&&p.mdwpa!==""?fmt1(p.mdwpa):"?")+'</b></span><span>Honor <b>'+(p.honor?f(p.honor):"?")+'</b></span><span>Gens out <b>'+(p.generalsUsed||0)+'</b></span></div>';
   if(p.ops&&p.ops.length){
     const last=p.ops.slice(-6).reverse();
@@ -2389,8 +2398,8 @@ document.getElementById("modal").addEventListener("click",e=>{ if(e.target.id===
 function gv(id){ const el=document.getElementById(id); return el?el.value:""; }
 function gc(id){ const el=document.getElementById(id); return el?el.checked:false; }
 
-function sciSection(p){const s=p.science||{};if(!s.list||!s.list.length)return "";const lc=n=>(Number(n)||0).toLocaleString();const rows=s.list.map(x=>`<tr><td class="l">${x.name}</td><td class="num">${lc(x.books)}</td><td class="num">${x.effect>0?"+":""}${x.effect}%</td><td class="l">${x.desc}</td></tr>`).join("");return `<div style="margin:14px 0 8px;color:var(--gold2);font-weight:600">📚 Sciences${s.scientistGen?(" — gen "+s.scientistGen+"%"):""}${s.nextCat?(" · next: "+s.nextCat):""}</div><table><thead><tr><th class="l">Science</th><th>Books</th><th>Effect</th><th class="l">Bonus</th></tr></thead><tbody>${rows}</tbody></table>`;}
-function buildSection(p){const b=p.buildings||{};if(!b.list||!b.list.length)return "";const lc=n=>(Number(n)||0).toLocaleString();const land=b.totalLand||0;const list=b.list.slice().sort((x,y)=>(y.own+y.prog)-(x.own+x.prog));const built=list.reduce((s,x)=>s+x.own,0);const building=list.reduce((s,x)=>s+x.prog,0);const empty=(b.undeveloped!=null)?b.undeveloped:(land-built-building);const pct=v=>land?(Math.round(v/land*1000)/10):0;const card=(lbl,val,gold)=>`<div style="flex:1;min-width:86px;background:rgba(255,255,255,.04);border-radius:6px;padding:6px 8px"><div style="font-size:11px;opacity:.6">${lbl}</div><div style="font-weight:600${gold?";color:var(--gold2)":""}">${lc(val)} <span style="opacity:.55;font-weight:400">${pct(val)}%</span></div></div>`;const rows=list.filter(x=>x.own>0||x.prog>0).map(x=>`<tr><td class="l">${x.name}</td><td class="num">${lc(x.own)}</td><td class="num">${pct(x.own)}%</td><td class="num">${x.prog>0?("+"+x.prog):"—"}</td></tr>`).join("");const meta=[];if(b.cost)meta.push(lc(b.cost)+"gc/ac");if(b.time)meta.push(b.time+"d build");if(b.credits)meta.push(lc(b.credits)+" credits");return `<div style="margin:14px 0 8px;color:var(--gold2);font-weight:600">🏗 Buildings${land?(" — "+lc(land)+" acres"):""}${meta.length?(" · "+meta.join(" · ")):""}</div><div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">${card("Built",built)}${card("Building",building,true)}${card("Empty",empty)}</div><table><thead><tr><th class="l">Building</th><th>Own</th><th>% land</th><th>In Prog</th></tr></thead><tbody>${rows}</tbody></table>`;}
+function sciSection(p){const it=p.intel||{};const list=it.science||[];if(!list.length)return "";const lc=n=>(Number(n)||0).toLocaleString();const rows=list.map(x=>`<tr><td class="l">${esc(x.name)}</td><td class="num">${lc(x.books)}</td><td class="num">${x.effect>0?"+":""}${x.effect}%</td><td class="l">${esc(x.desc||"")}</td></tr>`).join("");return `<div style="margin:14px 0 8px;color:var(--gold2);font-weight:600">📚 Sciences${it.scientistGen!=null?(" — gen "+it.scientistGen+"%"):""}${it.nextCat?(" · next: "+esc(it.nextCat)):""}</div><table><thead><tr><th class="l">Science</th><th>Books</th><th>Effect</th><th class="l">Bonus</th></tr></thead><tbody>${rows}</tbody></table>`;}
+function buildSection(p){const it=p.intel||{};const sv=it.survey;if(!sv||!sv.buildings||!sv.buildings.length)return "";const st=sv.stats||{};const lc=n=>(Number(n)||0).toLocaleString();const land=Number(sv.total||st.total||p.land||0);const list=sv.buildings.slice().sort((x,y)=>((y.qty||0)+(y.prog||0))-((x.qty||0)+(x.prog||0)));const built=list.reduce((s,x)=>s+(x.qty||0),0);const building=list.reduce((s,x)=>s+(x.prog||0),0);const empty=(st.undeveloped!=null)?st.undeveloped:(land-built-building);const pctv=v=>land?(Math.round(v/land*1000)/10):0;const pctb=x=>x.pct!=null?x.pct:pctv(x.qty||0);const card=(lbl,val,gold)=>`<div style="flex:1;min-width:86px;background:rgba(255,255,255,.04);border-radius:6px;padding:6px 8px"><div style="font-size:11px;opacity:.6">${lbl}</div><div style="font-weight:600${gold?";color:var(--gold2)":""}">${lc(val)} <span style="opacity:.55;font-weight:400">${pctv(val)}%</span></div></div>`;const rows=list.filter(x=>(x.qty||0)>0||(x.prog||0)>0).map(x=>`<tr><td class="l">${esc(x.name)}</td><td class="num">${lc(x.qty)}</td><td class="num">${pctb(x)}%</td><td class="num">${(x.prog||0)>0?("+"+x.prog):"—"}</td></tr>`).join("");const meta=[];if(st.buildEff!=null)meta.push(st.buildEff+"% eff");if(st.cost)meta.push(lc(st.cost)+"gc/ac");if(st.time)meta.push(st.time+"d build");if(st.credits)meta.push(lc(st.credits)+" credits");return `<div style="margin:14px 0 8px;color:var(--gold2);font-weight:600">🏗 Buildings${land?(" — "+lc(land)+" acres"):""}${meta.length?(" · "+meta.join(" · ")):""}</div><div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">${card("Built",built)}${card("Building",building,true)}${card("Empty",empty)}</div><table><thead><tr><th class="l">Building</th><th>Own</th><th>% land</th><th>In Prog</th></tr></thead><tbody>${rows}</tbody></table>`;}
 function attackSection(p){
   const a=p.attacks;
   if(!a||((!a.out||!Object.keys(a.out).length)&&(!a.in||!Object.keys(a.in).length)))return "";
@@ -2462,27 +2471,32 @@ function saveIntelNote(v){ if(intelSubProv){ intelSubProv.note=v; const t=docume
 function findProvAny(id){ let p=(STATE.myKd.provinces||[]).find(x=>x.id===id); if(p) return p; for(const e of Object.values(STATE.enemies||{})){ p=(e.provinces||[]).find(x=>x.id===id); if(p) return p; } return null; }
 function intelTabsModal(p){
   intelSubProv=p; const d=p.raw||{};
-  if(!Object.keys(d).length){
-    const it=p.intel||{};
-    if(it.throne||it.survey||(it.science&&it.science.length)||it.ome!=null||it.generals!=null||it.thieves!=null||it.warHorses!=null){
-      return '<div class="mh"><h3>'+esc(p.name)+' — intel</h3><button class="close" data-act="closemodal">×</button></div>'+enemyIntelHtml(p);
-    }
-    return provDetail(p);
+  const it=p.intel||{};
+  const hasIntel=it.throne||it.survey||(it.science&&it.science.length)||(it.units&&it.units.length)||it.ome!=null||it.generals!=null||it.thieves!=null||it.warHorses!=null||it.econ;
+  const hasRaw=Object.keys(d).length>0;
+  let rawHtml="";
+  if(hasRaw){
+    const sections=ITABS.map(function(def){
+      let body;
+      if(def[1]==="__BLD__") body=iBldHtml(d);
+      else if(def[1]==="__NOTES__") body=iNotesHtml(p,d);
+      else { const cols=def[1]; body="<div class=\""+(cols.length>6?"icols":"")+"\">"+cols.map(k=>iRow(k,iVal(d,k))).join("")+"</div>"; }
+      return "<div style=\"margin-top:15px\"><div style=\"color:var(--gold2);font-weight:700;font-size:12.5px;letter-spacing:.03em;text-transform:uppercase;margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,.10)\">"+def[0]+"</div>"+body+"</div>";
+    }).join("");
+    rawHtml="<div class=\"igrid\">"+sections+"</div>";
   }
-  const tab=Math.min(intelSubTab,ITABS.length-1);
-  let h="<div class=\"mh\"><h3>"+iFmt(d["Name"]||p.name)+" <span class=\"tag\" style=\"color:var(--gold2)\">"+iFmt(d["Kd #"]||"")+"</span> <span class=\"tag\" style=\"color:var(--teal2)\">"+iFmt(d["Race"]||p.race)+"</span> <span class=\"tag\" style=\"color:var(--blue)\">"+iFmt(d["Personality"]||p.pers)+"</span></h3><button class=\"close\" data-act=\"closemodal\">\u00d7</button></div>";
-  const sections=ITABS.map(function(def){
-    let body;
-    if(def[1]==="__BLD__") body=iBldHtml(d);
-    else if(def[1]==="__NOTES__") body=iNotesHtml(p,d);
-    else { const cols=def[1]; body="<div class=\""+(cols.length>6?"icols":"")+"\">"+cols.map(k=>iRow(k,iVal(d,k))).join("")+"</div>"; }
-    return "<div style=\"margin-top:15px\"><div style=\"color:var(--gold2);font-weight:700;font-size:12.5px;letter-spacing:.03em;text-transform:uppercase;margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,.10)\">"+def[0]+"</div>"+body+"</div>";
-  }).join("");
-  h+="<div class=\"igrid\">"+sections+"</div>";
-  return h;
+  if(hasIntel){                                // live capture is the source of truth; CSV appended below
+    let h=provDetail(p);
+    if(hasRaw) h+="<div style=\"margin:16px 6px 4px;color:var(--gold2);font-weight:700;font-size:12px;text-transform:uppercase;opacity:.85\">\ud83d\udcc4 Imported data</div>"+rawHtml;
+    return h;
+  }
+  if(!hasRaw) return provDetail(p);
+  const h="<div class=\"mh\"><h3>"+iFmt(d["Name"]||p.name)+" <span class=\"tag\" style=\"color:var(--gold2)\">"+iFmt(d["Kd #"]||"")+"</span> <span class=\"tag\" style=\"color:var(--teal2)\">"+iFmt(d["Race"]||p.race)+"</span> <span class=\"tag\" style=\"color:var(--blue)\">"+iFmt(d["Personality"]||p.pers)+"</span></h3><button class=\"close\" data-act=\"closemodal\">\u00d7</button></div>";
+  return h+rawHtml;
 }
 
-function provDetail(p){const m=p.military||{};const land=Number(p.land)||0;const lc=n=>(Number(n)||0).toLocaleString();const pa=n=>land?(Number(n)/land).toFixed(2):"—";const u=(m.units||[]).map(x=>`<tr><td class="l">${x.name}</td><td class="num">${x.off}/${x.def}</td><td class="num">${lc(x.own)}</td><td class="num" style="color:var(--gold2)">${pa(x.own)}</td><td class="num">${x.training?lc(x.training):"—"}</td></tr>`).join("");const cell=(k,v,r)=>`<div class="sumcell"><div class="k">${k}</div><div class="v">${lc(v)}</div>${r?`<div class="k" style="color:var(--gold2)">${pa(v)}/ac</div>`:""}</div>`;const mil=m.units&&m.units.length?`<div class="sumbar">${cell("Off specs",m.offSpecs,1)}${cell("Def specs",m.defSpecs,1)}${cell("Elites",m.elites,1)}${cell("Thieves",m.thieves,1)}${cell("Wizards",m.wizards,1)}${cell("Soldiers",m.soldiers,0)}${cell("Credits",m.credits,0)}</div><table><thead><tr><th class="l">Unit</th><th>Off/Def</th><th>Owned</th><th>/Acre</th><th>Training</th></tr></thead><tbody>${u}</tbody></table><div class="note">Pop ${lc(m.totalPop)} · mil ${lc(m.milPop)} · peasants ${lc(m.peasants)} · land ${lc(land)}${m.draftRate?(" · draft: "+m.draftRate):""}</div>`:`<div class="empty">No military capture yet — open the Military page in-game and it will fill in within a minute.</div>`;return `<div class="mh"><h3>${p.name} — detail</h3><button class="close" data-act="closemodal">×</button></div><div style="margin:4px 0 10px;color:var(--gold2);font-weight:600">⚔ Military</div>${mil}${typeof attackSection==="function"?attackSection(p):""}${typeof buildSection==="function"?buildSection(p):""}${typeof sciSection==="function"?sciSection(p):""}`;}
+function militaryUnitTable(p){const it=p.intel||{};const land=Number(p.land)||0;const lc=n=>(Number(n)||0).toLocaleString();const pa=n=>land?(Number(n)/land).toFixed(2):"—";if(!it.units||!it.units.length)return "";const u=it.units.map(x=>`<tr><td class="l">${esc(x.name)}</td><td class="num">${x.off}/${x.def}</td><td class="num">${lc(x.own)}</td><td class="num" style="color:var(--gold2)">${pa(x.own)}</td><td class="num">${x.training?lc(x.training):"—"}</td></tr>`).join("");const cell=(k,v,r)=>`<div class="sumcell"><div class="k">${k}</div><div class="v">${lc(v)}</div>${r?`<div class="k" style="color:var(--gold2)">${pa(v)}/ac</div>`:""}</div>`;return `<div style="margin:12px 0 8px;color:var(--gold2);font-weight:600">⚔ Military units</div><div class="sumbar">${cell("Off specs",it.offSpecs,1)}${cell("Def specs",it.defSpecs,1)}${cell("Elites",it.elites,1)}${cell("Thieves",it.thieves,1)}${cell("Wizards",it.wizards,1)}${cell("Soldiers",it.soldiers,0)}${cell("Credits",it.trainCredits,0)}</div><table><thead><tr><th class="l">Unit</th><th>Off/Def</th><th>Owned</th><th>/Acre</th><th>Training</th></tr></thead><tbody>${u}</tbody></table>${(it.totalPop!=null||it.draftRate)?`<div class="note">Pop ${lc(it.totalPop)} · mil ${lc(it.milPop)} · peasants ${lc(it.peasants)} · land ${lc(land)}${it.draftRate?(" · draft: "+esc(it.draftRate)):""}</div>`:""}`;}
+function provDetail(p){const it=p.intel||{};const header=`<div class="mh"><h3>${esc(p.name)} — detail</h3><button class="close" data-act="closemodal">×</button></div>`;const hasAny=it.throne||(it.units&&it.units.length)||it.survey||(it.science&&it.science.length)||it.ome!=null||it.thieves!=null||it.warHorses!=null||it.econ;if(!hasAny)return header+`<div style="padding:12px"><div class="empty">No intel captured yet — open this province's pages in-game (throne, military, science, buildings) and they'll fill in within a minute.</div></div>`;return header+`<div style="padding:0 6px 8px">`+enemyIntelHtml(p)+(typeof militaryUnitTable==="function"?militaryUnitTable(p):"")+(typeof attackSection==="function"?attackSection(p):"")+(typeof buildSection==="function"?buildSection(p):"")+(typeof sciSection==="function"?sciSection(p):"")+`</div>`;}
 function openProv(id){
   const p = id? mp(id) : {name:"",race:"",pers:"",land:"",nw:"",offense:"",defense:"",generals:STATE.settings.defGenerals,fana:false,bl:false};
   openModal(`<div class="mh"><h3>${id?"Edit":"Add"} Province</h3><button class="close" data-act="closemodal">×</button></div>

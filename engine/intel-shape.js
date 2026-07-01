@@ -93,6 +93,12 @@
       setIf(it, "soldiers", numI(M.soldiers));
       setIf(it, "offSpecs", numI(M.offSpecs)); setIf(it, "defSpecs", numI(M.defSpecs));
       setIf(it, "elites", numI(M.elites)); setIf(it, "warHorses", numI(M.warHorses));
+      // train_army extras (our own military page): keep the whole picture
+      setIf(it, "draftRate", M.draftRate);
+      if (M.totalPop != null) it.totalPop = numI(M.totalPop);
+      if (M.milPop != null) it.milPop = numI(M.milPop);
+      if (M.peasants != null) it.peasants = numI(M.peasants);
+      if (M.trainCredits != null) it.trainCredits = numI(M.trainCredits);
       if (M.units && M.units.length) it.units = M.units;
       if (M.offHome != null) { it.offHome = numI(M.offHome); if (it.offHome != null) p.offense = it.offHome; }
       if (M.defHome != null) { it.defHome = numI(M.defHome); if (it.defHome != null) p.defense = it.defHome; }

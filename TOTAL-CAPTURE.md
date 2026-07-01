@@ -62,10 +62,15 @@ stealth mana prisoners warHorses armyOut incomingLand returnTick spells[] ops[] 
 
 ## Steps (commit + backup + `node --check` + diff before applying each)
 
-- [ ] **1. Unified `intel.*` shape helper** — `engine/intel-shape.js` (`mergeIntel`, `numI`),
-      mirrored inline as `WRIntel` in both HTMLs. No wiring yet (pure add, zero behavior change).
-- [ ] **2. My-own capture into my provinces** — throne/science/military/build engine parsers +
-      new `council_military` write the unified shape via mergeIntel; CSV + browser too.
+- [x] **1. Unified `intel.*` shape helper** — `engine/intel-shape.js` (`mergeIntel`, `numI`),
+      mirrored inline as `WRIntel` in both HTMLs. Pure add, zero behavior change. (commit a404a1d)
+- [x] **2. My-own capture into my provinces** — throne/science/military/build engine parsers now
+      emit the unified `intel.*` via mergeIntel; renderers (enemyIntelHtml/sciSection/buildSection/
+      provDetail/intelTabsModal) migrated to read `intel.*`; bot already reads it; CSV feeds the
+      flat fields the card reads + raw view appended below live intel. Verified by replay of real
+      intel-log samples (throne 20 keys+ritual+spells, mil EPA/DSPA+units, build 18+stats, sci 18)
+      and by running the migrated renderers → 10KB max card. `council_military` generals moved to
+      step 4 (it's a new parser).
 - [ ] **3. Instant push** — engine broadcasts SSE `state` after every write; both HTMLs open
       `/events` and refetch. Zero-browser path proven.
 - [ ] **4. New parsers, batch 1** — enchantment (wizards/mystics), council_state (state),
