@@ -32,7 +32,11 @@ Status: ✅ DONE (2026-07-01) — spy ops render + bot registers.
 ## TASK 3 — CSV → server → bot
 CSV import (my KD AND enemy KD) must push to `/save` so state.json updates and the bot sees it. Check current behavior; add push if missing. Commit.
 
-Status: ⏳ not started
+Status: ✅ DONE (2026-07-01) — push existed but was silent; made it explicit + surfaced.
+- Finding: imports already pushed via mutate→scheduleSave→pushToServer (400ms debounce), but pushToServer is fire-and-forget — swallows errors, no toast. With the new Group A /save firewalls, a rejected import looked successful locally yet never reached state.json → bot never saw it (silent failure).
+- Fix: added `importSave(what)` helper in BOTH warroom.html + warroom-mobile.html — cancels the debounce, writes localStorage, then AWAITs the /save POST and toasts the real result (✅ saved to server / ⚠ SERVER REJECTED it: <error> — bot NOT updated). Routed all 4 import paths (my KD + enemy by-location/merge/create) through it; doImportMy/doImportEnemy are now async.
+- No server change. Inline JS syntax-checked via vm.Script (both files, 0 errors). NOT restarted (HTML change → warroom-server restart to serve new files; awaiting OK).
+- Manual test: import a CSV → expect a ✅/⚠ server-result toast; feed a wrong-KD CSV → expect the ⚠ rejection toast.
 
 ## TASK 4 — Four bot commands (kd arg = ours OR enemy x:y, aligned monospace tables)
 - `/kdtpa` and `/kdwpa` — per-prov Raw + Mod, KD avg (raw+mod), total thieves/wizards, high/low prov. Enemy: real where scouted, "?" where not.
@@ -44,4 +48,5 @@ Status: ⏳ not started
 ---
 
 ## Progress log
+- 2026-07-01 — TASK 3 complete. CSV import push made explicit + result-surfaced: added importSave() to both HTML files, routed all 4 my/enemy import paths through it (async). Push already existed (silent debounce) but rejections were invisible; now toasted. vm.Script syntax check clean. warroom-server NOT restarted (awaiting OK to serve new HTML).
 - 2026-07-01 — TASK 2 complete. scout.js +generals; bot.js provCard military/army-out/science/survey + vpParseOp op-registration; both HTML SoM label + intel render. Group A firewalls/combo split into its own prior commit. bot.js/scout.js/intel-server.js pass node --check. pm2 not restarted (awaiting OK).

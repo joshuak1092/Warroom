@@ -787,6 +787,22 @@ async function saveToServer(){
     else { toast("\u26a0 Save failed: "+(j.error||("HTTP "+r.status))); }
   }catch(e){ toast("\u26a0 Save to server failed: "+e.message); }
 }
+// CSV imports use this instead of the silent debounced push: write localStorage,
+// then AWAIT the /save POST and surface the server's real answer (esp. firewall
+// rejections) so the user knows whether state.json — and the bot — actually got it.
+async function importSave(what){
+  clearTimeout(saveTimer);
+  await save();
+  if(typeof setSaveStatus==="function") setSaveStatus("save");
+  const su=((STATE.settings.syncUrl||location.origin)+"").replace(/\/+$/,"");
+  const sk=STATE.settings.syncKey||"";
+  try{
+    const r=await fetch(su+"/save",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:sk,state:JSON.stringify(STATE)})});
+    const j=await r.json().catch(()=>({}));
+    if(j.success){ if(typeof setSaveStatus==="function") setSaveStatus("saved"); toast("✅ "+what+" → saved to server ("+j.myprovs+" provs / "+j.enemies+" KDs). Bot updated."); }
+    else { if(typeof setSaveStatus==="function") setSaveStatus("local"); toast("⚠ "+what+" locally, but SERVER REJECTED it: "+(j.error||("HTTP "+r.status))+" — bot NOT updated. Fix the CSV or use Save to Server (force)."); }
+  }catch(e){ if(typeof setSaveStatus==="function") setSaveStatus("local"); toast("⚠ "+what+" locally, but server push FAILED: "+e.message+" — bot NOT updated."); }
+}
 async function pullFromServer(){
   try{ const su=((STATE.settings.syncUrl||window.location.origin)+"").replace(/\/+$/,""); const sk=STATE.settings.syncKey||(window.__WR_SYNC&&window.__WR_SYNC.key)||"";
     const r=await fetch(su+"/state?key="+encodeURIComponent(sk)+"&_="+Date.now());
@@ -2725,7 +2741,7 @@ function rowsToObjects(text){
   return {map,objs};
 }
 
-function doImportMy(){
+async function doImportMy(){
   const txt=gv("pasteMy").trim();
   if(!txt){ toast("Paste or drop your kingdom CSV first."); return; }
   const {objs}=rowsToObjects(txt);
@@ -2743,7 +2759,7 @@ function doImportMy(){
     generals:Math.max(1,Math.min(MAX_GENERALS,(o.generals!==undefined&&o.generals!==""?num(o.generals):(STATE.settings.defGenerals+((wrRacePers(o).pers||"").toLowerCase()==="general"?1:0))))),
     fana:parseBool(o.fana),bl:parseBool(o.bl),fanaOn:false,blOn:false,sci:grabSci(o)}));
   mutate(()=>{STATE.myKd.provinces=provs;VIEW="mykd";});
-  save(); toast(`Imported ${provs.length} provinces into ${STATE.myKd.name}.`);
+  await importSave("Imported "+provs.length+" provinces into "+STATE.myKd.name);
 }
 const SCI_KEYS=["alche","tools","housi","produ","bookk","artis","strat","siege","tacti","valor","heroi","resil","crime","chann","shiel","cunni","sorce","fines"];
 function grabSci(o){ const s={}; let any=false; SCI_KEYS.forEach(k=>{ if(o[k]!==undefined&&o[k]!==""){ s[k]=num(o[k]); any=true; } });
@@ -2783,7 +2799,7 @@ function buildEnemyProvs(objs){
     armyOut:num(o.army)>0||parseBool(o.armyout),returnTick:num(o.returntick),incomingLand:num(o.incomingland),
     generalsUsed:num(o.generalsused),pop:num(o.pop),maxpop:num(o.maxpop),sci:grabSci(o)}));
 }
-function doImportEnemy(merge){
+async function doImportEnemy(merge){
   const txt=gv("pasteEnemy").trim();
   if(!txt){ toast("Paste or drop enemy CSV first."); return; }
   const {objs}=rowsToObjects(txt);
@@ -2808,7 +2824,7 @@ function doImportEnemy(merge){
       }
       if(lastId) STATE.activeEnemy=lastId; VIEW="wave";
     });
-    save(); toast("Imported "+provCount+" enemy + "+homeCount+" home provinces by location.");
+    await importSave("Imported "+provCount+" enemy + "+homeCount+" home provinces");
     return;
   }
   const provs=buildEnemyProvs(objs);
@@ -2819,14 +2835,14 @@ function doImportEnemy(merge){
         if(ex){ Object.assign(ex,{...np,id:ex.id}); } else e.provinces.push(np); });
       VIEW="wave";
     });
-    save(); toast(`Merged ${provs.length} provinces into ${e.name}.`);
+    await importSave("Merged "+provs.length+" provinces into "+e.name);
   } else {
     const name=gv("enmName").trim()||"Enemy KD "+(Object.keys(STATE.enemies).length+1);
     const loc=gv("enmLoc").trim();
     const nid=uid();
     mutate(()=>{ STATE.enemies[nid]={id:nid,name,loc,status:"available",warMode:"out",eowcfExit:"",note:"",wave:[],provinces:provs};
       STATE.activeEnemy=nid; VIEW="wave"; });
-    save(); toast(`Created "${name}" with ${provs.length} provinces.`);
+    await importSave("Created \""+name+"\" with "+provs.length+" provinces");
   }
 }
 
