@@ -3303,6 +3303,21 @@ async function syncPull(){
   }catch(e){}
 }
 
+/* INSTANT PUSH (browser side): subscribe to server-sent events so ENGINE writes
+   and other admins' saves refresh this tab the moment they land — no waiting on
+   the 4s poll (which stays as a fallback). EventSource auto-reconnects. */
+function startSSE(){
+  const url=((STATE.settings.syncUrl||location.origin)+"").replace(/\/+$/,""); if(!url||typeof EventSource==="undefined") return;
+  try{ if(window.__wrES) window.__wrES.close(); }catch(e){}
+  try{
+    const es=new EventSource(url+"/events?key="+encodeURIComponent(STATE.settings.syncKey||""));
+    window.__wrES=es;
+    const pull=()=>{ try{ syncPull(); }catch(e){} };
+    es.addEventListener("state",pull);
+    es.addEventListener("feed",pull);
+    es.onerror=function(){ /* browser auto-reconnects; the poll below covers any gap */ };
+  }catch(e){}
+}
 function openPasteIntel(){
   const e=curEnemy();
   openModal(`<div class="mh"><h3>Paste Game Intel</h3><button class="close" data-act="closemodal">×</button></div>
@@ -3590,7 +3605,7 @@ function tickClock(){
   setSaveStatus(storageOK?"saved":"local");
   render();
   setInterval(tickClock,1000); tickClock();
-  setInterval(syncPull,4000); if(STATE.settings.syncUrl) syncPull();
+  setInterval(syncPull,4000); if(STATE.settings.syncUrl){ syncPull(); startSSE(); }
   document.addEventListener("dragover",ev=>{ const m=90; if(ev.clientY<m) window.scrollBy(0,-18); else if(window.innerHeight-ev.clientY<m) window.scrollBy(0,18); });
   window.addEventListener&&window.addEventListener("beforeunload",()=>{ try{ save(); }catch(e){} });
   document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden"){ try{ save(); }catch(e){} } });

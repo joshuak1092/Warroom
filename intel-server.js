@@ -11,7 +11,7 @@ function backupState(){ try{ if(!fs.existsSync(STATE_FILE)) return; const stamp=
 function cleanName(n){ return ((n||"")+"").replace(/[~¬`*]+/g,"").replace(/\s*\(\d{1,2}:\d{1,2}\)\s*$/,"").trim(); }
 function dedupeProvs(provs){ if(!Array.isArray(provs)) return []; const by={}; const out=[]; for(const p of provs){ const nm=cleanName(p&&p.name); if(!nm) continue; const k=nm.toLowerCase(); if(by[k]){ const keep=by[k]; for(const f in p){ if(p[f]!=null && p[f]!=="" && p[f]!==0) keep[f]=p[f]; } } else if(typeof p.race==="string" && p.race.trim() && +p.land>0){ p.name=nm; by[k]=p; out.push(p); } } return out; }
 function sanitizeState(inc){ const homeLoc=((inc.myKd&&inc.myKd.loc)||"").trim(); if(inc.myKd) inc.myKd.provinces=dedupeProvs(inc.myKd.provinces); if(inc.enemies && typeof inc.enemies==="object"){ for(const id in inc.enemies){ const e=inc.enemies[id]; if(!e){ delete inc.enemies[id]; continue; } e.provinces=dedupeProvs(e.provinces); /* home-fold KILLED: server never folds enemy provs into myKd */ } } return inc; }
-function writeState(obj){ backupState(); const tmp=STATE_FILE+".tmp"; fs.writeFileSync(tmp, JSON.stringify(obj)); fs.renameSync(tmp, STATE_FILE); }
+function writeState(obj){ backupState(); const tmp=STATE_FILE+".tmp"; fs.writeFileSync(tmp, JSON.stringify(obj)); fs.renameSync(tmp, STATE_FILE); try{ _lastStateMtime=fs.statSync(STATE_FILE).mtimeMs; }catch(e){} }
 let entries=[]; let nextId=1;
 try{ entries=JSON.parse(fs.readFileSync(LOG,"utf8")); nextId=(entries[entries.length-1]?.id||0)+1; }catch(e){}
 const persist=()=>{ try{ fs.writeFileSync(LOG,JSON.stringify(entries)); }catch(e){} };
@@ -21,6 +21,13 @@ function authRead(q){ return !KEY || q===KEY || (READKEY && q===READKEY); }
 let sseClients=[]; let lastSaveTime=null;
 function broadcast(type){ const line="event: "+type+"\ndata: "+Date.now()+"\n\n"; sseClients=sseClients.filter(r=>{ try{ r.write(line); return true; }catch(e){ return false; } }); }
 setInterval(()=>{ sseClients=sseClients.filter(r=>{ try{ r.write(":hb\n\n"); return true; }catch(e){ return false; } }); }, 25000);
+/* INSTANT PUSH: broadcast a 'state' SSE ping whenever state.json changes on disk.
+   The ENGINE (warroom-engine) writes state.json directly, bypassing /save, so
+   without this its updates would only reach browsers on the next poll. Watching
+   the file means every writer — engine, /save, /restore — pushes to all open
+   tabs the moment intel lands. The bot already reads state.json live. */
+let _lastStateMtime=0; try{ _lastStateMtime=fs.statSync(STATE_FILE).mtimeMs; }catch(e){}
+try{ fs.watchFile(STATE_FILE,{interval:1000},(cur)=>{ if(cur&&cur.mtimeMs&&cur.mtimeMs!==_lastStateMtime){ _lastStateMtime=cur.mtimeMs; broadcast("state"); } }); }catch(e){}
 /* ===== WoL Reference Wiki (added) ===== */
 const WIKI_FILE=__dirname+"/wiki.html";
 const WIKI_PW="Kriminal51!";

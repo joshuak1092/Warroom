@@ -71,8 +71,12 @@ stealth mana prisoners warHorses armyOut incomingLand returnTick spells[] ops[] 
       intel-log samples (throne 20 keys+ritual+spells, mil EPA/DSPA+units, build 18+stats, sci 18)
       and by running the migrated renderers → 10KB max card. `council_military` generals moved to
       step 4 (it's a new parser).
-- [ ] **3. Instant push** — engine broadcasts SSE `state` after every write; both HTMLs open
-      `/events` and refetch. Zero-browser path proven.
+- [x] **3. Instant push** — server watches `state.json` (fs.watchFile, 1s) and broadcasts a
+      `state` SSE ping on every write (engine writes bypass /save, so this is what makes them
+      instant); both HTMLs open an `EventSource` on `/events` and refetch on `state`/`feed`.
+      Proven end-to-end: an engine-style atomic write triggered a `state` broadcast with no
+      browser involved. ⚠️ needs `pm2 restart warroom-server` to take effect (HTML changes are
+      live on reload — server reads them fresh per request).
 - [ ] **4. New parsers, batch 1** — enchantment (wizards/mystics), council_state (state),
       council_military (generals).
 - [ ] **5. New parsers, batch 2** — rituals, dragons, aid, explore, uniques, province_news.
