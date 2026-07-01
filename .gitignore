@@ -50,3 +50,14 @@ bot-build/checkrulers.js
 bot-build/inspect.js
 bot-build/inspect2.js
 bot-build/SPEC.md
+
+# Manual/rolling state snapshots (keep on disk, don't commit)
+state.json.engine-bak
+state.backup.*.json
+state.json.SAFETY-*
+RECOVERY-*.json
+bot-build/usertz.json
+save-debug.log
+
+# Served reference file — keep local, never push to GitHub
+wiki.html
