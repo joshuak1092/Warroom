@@ -84,7 +84,15 @@ stealth mana prisoners warHorses armyOut incomingLand returnTick spells[] ops[] 
       only — decoupled `offHome→p.offense` in mergeIntel so effOffense() base stays the throne
       Off. Points (no double-count); card shows a "Net@home OFF/DEF" line. Verified by replay +
       render of real samples.
-- [ ] **5. New parsers, batch 2** — rituals, dragons, aid, explore, uniques, province_news.
+- [x] **5. New parsers, batch 2** — ritual.js (kingdom-scope: active ritual eff/days + ritual in
+      development, stamped onto each province's intel.ritual), dragon.js (kingdom-scope: ravaging
+      dragon type/name/strength → myKd.dragon), explore.js (uncharted/max/costs → intel.explore),
+      uniques.js (intel.uniques[]), aid.js (sendable resources → intel.econ when present),
+      provnews.js (intel.provNews[] last 20). Card renders uniques/explore/recent-province-news.
+      Kingdom ritual-in-development + dragon stored on myKd for the bot/header. All 15 parsers load
+      with match+parse; routing verified collision-free. Verified by replaying real samples →
+      full own-KD card renders every page (explore + recent news + ritual + wizards + buildings +
+      military + net@home + econ).
 
 ## Ground rules
 - Every step: back up touched files, `node --check`, show diff, apply to BOTH HTMLs + engine.

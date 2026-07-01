@@ -1182,6 +1182,9 @@ function enemyIntelHtml(p){
   if(it.plague)fl.push("☣ Plague");
   if(it.warWith)fl.push("⚔ war vs "+esc(it.warWith.name));
   if(fl.length)h+='<div class="note" style="margin-top:4px">'+fl.join(" · ")+'</div>';
+  if(it.uniques&&it.uniques.length)h+='<div class="note" style="margin-top:4px">🌟 Uniques: '+it.uniques.map(u=>esc(u.name)+(u.type?' <span class="note">('+esc(u.type)+')</span>':'')).join(" · ")+'</div>';
+  if(it.explore)h+='<div class="note" style="margin-top:4px">🧭 Explore: uncharted '+f(it.explore.uncharted)+(it.explore.maxExplore!=null?" · max now "+f(it.explore.maxExplore):"")+(it.explore.exploring?" · exploring "+f(it.explore.exploring):"")+'</div>';
+  if(it.provNews&&it.provNews.length)h+='<div style="margin-top:4px;line-height:1.7"><span class="note">📰 Recent: </span>'+it.provNews.slice(-4).reverse().map(n=>'<span class="note">'+esc((n.date||"").replace(/ of /," "))+':</span> '+esc(n.text)).join("<br>")+'</div>';
   if(it.econ){const ec=it.econ,eco=[];if(ec.income!=null)eco.push("Income "+f(ec.income));if(ec.wages!=null)eco.push("Wages "+f(ec.wages));if(ec.money!=null)eco.push("GC "+f(ec.money));if(ec.food!=null)eco.push("Food "+f(ec.food));if(ec.runes!=null)eco.push("Runes "+f(ec.runes));if(ec.tradeBalance!=null)eco.push("TB "+f(ec.tradeBalance));if(eco.length)h+='<div class="lr-stats" style="margin-top:4px">'+eco.map(x=>"<span>"+x+"</span>").join("")+'</div>';}
   if(p.spells&&p.spells.length)h+='<div class="note" style="margin-top:4px">✦ Spells: '+p.spells.map(s=>esc(s.name)+(s.days?" ("+s.days+"d)":"")).join(" · ")+'</div>';
   h+='<div class="lr-stats" style="margin-top:4px"><span>mdTPA <b>'+(p.mdtpa!=null&&p.mdtpa!==""?fmt1(p.mdtpa):"?")+'</b></span><span>mdWPA <b>'+(p.mdwpa!=null&&p.mdwpa!==""?fmt1(p.mdwpa):"?")+'</b></span><span>Honor <b>'+(p.honor?f(p.honor):"?")+'</b></span><span>Gens out <b>'+(p.generalsUsed||0)+'</b></span></div>';
